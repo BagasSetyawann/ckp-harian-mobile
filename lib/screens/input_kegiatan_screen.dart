@@ -333,7 +333,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
         });
       }
 
-      widget.onSuccess?.();
+      widget.onSuccess?.call();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
