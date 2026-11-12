@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -12,11 +15,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
@@ -30,8 +33,22 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
+      - name: Prepare APK File
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/SI-CKP-Mobile.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: si-ckp-mobile-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/SI-CKP-Mobile.apk
+
+      - name: Publish GitHub Release APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "SI-CKP Mobile v1.0.0 (Android APK)"
+          body: "Unduh file **SI-CKP-Mobile.apk** di bawah ini untuk menginstal aplikasi SI-CKP Mobile langsung di HP Android Anda."
+          files: build/app/outputs/flutter-apk/SI-CKP-Mobile.apk
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
