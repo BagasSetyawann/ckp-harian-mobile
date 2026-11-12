@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'changelog_screen.dart';
 
 class ProfilScreen extends StatelessWidget {
   final VoidCallback onLogout;
@@ -102,6 +103,24 @@ class ProfilScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+            );
+          },
+          icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF0284C7)),
+          label: const Text('Lihat Changelog & Pembaruan Sistem (v1.3)'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE0F2FE),
+            foregroundColor: const Color(0xFF0369A1),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+        const SizedBox(height: 10),
         ElevatedButton.icon(
           onPressed: () => _showChangePasswordDialog(context),
           icon: const Icon(Icons.lock_reset),

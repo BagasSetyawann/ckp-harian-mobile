@@ -332,5 +332,15 @@ class ApiService {
         .timeout(const Duration(seconds: 20));
     return _handleResponse(res) as Map<String, dynamic>;
   }
+
+  // ─── CHANGELOGS ───
+
+  static Future<List<dynamic>> getChangelogs() async {
+    final uri = Uri.parse('$_baseUrl/changelogs');
+    final res = await http
+        .get(uri, headers: _headers())
+        .timeout(const Duration(seconds: 15));
+    return _handleResponse(res) as List<dynamic>;
+  }
 }
 

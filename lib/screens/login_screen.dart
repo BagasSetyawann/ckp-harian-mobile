@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'changelog_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -278,9 +279,28 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 20),
                             const Divider(height: 1),
                             const SizedBox(height: 14),
-                            const Text(
-                              'Akun Demo Pegawai (Tap untuk isi cepat):',
-                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Akun Demo Pegawai (Tap untuk isi):',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.auto_awesome_rounded, size: 14),
+                                  label: const Text('Changelog v1.3', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 10),
                             GridView.count(

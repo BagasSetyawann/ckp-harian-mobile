@@ -6,6 +6,7 @@ import 'screens/input_kegiatan_screen.dart';
 import 'screens/riwayat_kegiatan_screen.dart';
 import 'screens/rk_nilai_screen.dart';
 import 'screens/profil_screen.dart';
+import 'screens/changelog_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,6 +110,29 @@ class _MainShellState extends State<MainShell> {
             Text(_titles[_currentIndex]),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+                );
+              },
+              icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF0284C7)),
+              label: const Text(
+                'Changelog',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFE0F2FE),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(color: const Color(0xFFE2E8F0), height: 1),

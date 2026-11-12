@@ -201,7 +201,8 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                         itemCount: _activities.length,
                         itemBuilder: (ctx, i) {
                           final act = _activities[i] as Map<String, dynamic>;
-                          final isVerified = act['verif_status'] == 'terverifikasi';
+                          final statusKeg = act['status_kegiatan']?.toString() ?? 'selesai';
+                          final isSelesai = statusKeg == 'selesai';
                           final jumlahBukti = (act['jumlah_bukti'] ?? 0) + (act['jumlah_link'] ?? 0);
                           final capaian = act['persentase_capaian'] ?? 0;
                           final buktiKet = act['bukti_keterangan']?.toString();
@@ -234,15 +235,15 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: isVerified ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                                        color: isSelesai ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        isVerified ? '✓ Terverifikasi' : '⏳ Menunggu',
+                                        isSelesai ? '✓ Selesai' : statusKeg,
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
-                                          color: isVerified ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                                          color: isSelesai ? const Color(0xFF065F46) : const Color(0xFF92400E),
                                         ),
                                       ),
                                     ),
@@ -298,21 +299,20 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                       icon: const Icon(Icons.attach_file, size: 16),
                                       label: Text('Bukti Dukung ($jumlahBukti)', style: const TextStyle(fontSize: 12.5)),
                                     ),
-                                    if (!isVerified)
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            onPressed: () => _openEditModal(act),
-                                            icon: const Icon(Icons.edit_outlined, size: 19, color: Color(0xFF475569)),
-                                            tooltip: 'Edit',
-                                          ),
-                                          IconButton(
-                                            onPressed: () => _deleteActivity(act['id'] as int),
-                                            icon: const Icon(Icons.delete_outline, size: 19, color: Colors.red),
-                                            tooltip: 'Hapus',
-                                          ),
-                                        ],
-                                      ),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: () => _openEditModal(act),
+                                          icon: const Icon(Icons.edit_outlined, size: 19, color: Color(0xFF475569)),
+                                          tooltip: 'Edit',
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _deleteActivity(act['id'] as int),
+                                          icon: const Icon(Icons.delete_outline, size: 19, color: Colors.red),
+                                          tooltip: 'Hapus',
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ],
