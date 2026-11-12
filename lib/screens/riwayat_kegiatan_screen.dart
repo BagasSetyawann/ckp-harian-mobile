@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../utils/photo_watermark.dart';
 import 'input_kegiatan_screen.dart';
 
 class RiwayatKegiatanScreen extends StatefulWidget {
@@ -120,14 +122,25 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
     );
   }
 
+  void _downloadPeriodExcel() {
+    if (_selectedPeriodId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih periode terlebih dahulu')),
+      );
+      return;
+    }
+    final url = ApiService.getExcelExportUrl(periodId: _selectedPeriodId!);
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Filter Bar
+        // Filter & Download Bar
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
           child: Row(
             children: [
               Expanded(
@@ -153,6 +166,16 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                 ),
               ),
               const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _downloadPeriodExcel,
+                icon: const Icon(Icons.download_rounded, size: 17, color: Color(0xFF059669)),
+                label: const Text('Excel', style: TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF059669)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
               IconButton(
                 onPressed: _fetchActivities,
                 icon: const Icon(Icons.refresh),
@@ -181,6 +204,7 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                           final isVerified = act['verif_status'] == 'terverifikasi';
                           final jumlahBukti = (act['jumlah_bukti'] ?? 0) + (act['jumlah_link'] ?? 0);
                           final capaian = act['persentase_capaian'] ?? 0;
+                          final buktiKet = act['bukti_keterangan']?.toString();
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
@@ -229,11 +253,26 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                   act['nama_kegiatan']?.toString() ?? '',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF1E293B)),
                                 ),
-                                if (act['pk_kode'] != null) ...[
+                                if (act['deskripsi'] != null && act['deskripsi'].toString().isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${act['pk_kode']} · ${act['pk_nama'] ?? ''}',
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF0284C7)),
+                                    act['deskripsi'].toString(),
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                                if (buktiKet != null && buktiKet.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                                    ),
+                                    child: Text(
+                                      buktiKet,
+                                      style: const TextStyle(fontSize: 11, color: Color(0xFF065F46), fontWeight: FontWeight.w500),
+                                    ),
                                   ),
                                 ],
                                 const SizedBox(height: 8),
@@ -325,6 +364,34 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
     }
   }
 
+  Future<void> _uploadCameraWithGeotag() async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      if (photo == null) return;
+
+      setState(() => _uploading = true);
+      final rawBytes = await photo.readAsBytes();
+      final watermarked = await PhotoWatermark.stampCameraPhoto(rawBytes);
+
+      await ApiService.uploadEvidenceFile(
+        activityId: widget.activity['id'] as int,
+        fileName: watermarked.fileName,
+        bytes: watermarked.bytes,
+        mimeType: watermarked.mimeType,
+        keterangan: watermarked.metadataText,
+      );
+      await _load();
+      widget.onChanged();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal upload foto: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
   Future<void> _uploadNewFile() async {
     final result = await FilePicker.platform.pickFiles(
       withData: true,
@@ -375,10 +442,25 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
           const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: _uploading ? null : _uploadNewFile,
-            icon: const Icon(Icons.upload_file, size: 18),
-            label: Text(_uploading ? 'Mengunggah...' : 'Tambah File Bukti'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _uploading ? null : _uploadCameraWithGeotag,
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: Text(_uploading ? 'Memproses...' : 'Kamera (GPS + Timestamp)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _uploading ? null : _uploadNewFile,
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('Pilih File'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           if (_loading)
@@ -394,6 +476,12 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.insert_drive_file, color: Color(0xFF0284C7)),
                   title: Text(f['nama_file']?.toString() ?? ''),
+                  subtitle: f['keterangan'] != null && f['keterangan'].toString().isNotEmpty
+                      ? Text(
+                          f['keterangan'].toString(),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                        )
+                      : null,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -436,4 +524,3 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
     );
   }
 }
-

@@ -73,7 +73,7 @@ class _MainShellState extends State<MainShell> {
     'SI-CKP Mobile',
     'Input CKP Harian',
     'Riwayat Kegiatan',
-    'RK & Nilai CKP',
+    'Nilai CKP & Laporan',
     'Profil Pegawai',
   ];
 
@@ -139,7 +139,7 @@ class _MainShellState extends State<MainShell> {
           NavigationDestination(
             icon: Icon(Icons.workspace_premium_outlined),
             selectedIcon: Icon(Icons.workspace_premium_rounded, color: Color(0xFF0284C7)),
-            label: 'RK & Nilai',
+            label: 'Nilai CKP',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 
 class RkNilaiScreen extends StatefulWidget {
@@ -10,7 +11,6 @@ class RkNilaiScreen extends StatefulWidget {
 
 class _RkNilaiScreenState extends State<RkNilaiScreen> {
   List<dynamic> _periods = [];
-  List<dynamic> _plans = [];
   Map<String, dynamic>? _ckpData;
   int? _selectedPeriodId;
   bool _loading = true;
@@ -47,14 +47,10 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
     if (_selectedPeriodId == null) return;
     setState(() => _loading = true);
     try {
-      final results = await Future.wait([
-        ApiService.getPerformancePlans(periodId: _selectedPeriodId),
-        ApiService.getCkpScore(periodId: _selectedPeriodId!),
-      ]);
+      final res = await ApiService.getCkpScore(periodId: _selectedPeriodId!);
       if (mounted) {
         setState(() {
-          _plans = results[0] as List<dynamic>;
-          _ckpData = results[1] as Map<String, dynamic>;
+          _ckpData = res;
         });
       }
     } catch (_) {} finally {
@@ -68,6 +64,7 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
     final nilaiPk = _ckpData?['nilai_pk'] ?? 0;
     final nilaiPerilaku = _ckpData?['nilai_perilaku'] ?? 0;
     final status = _ckpData?['status'] ?? 'draft';
+    final catatan = _ckpData?['catatan']?.toString() ?? '';
 
     return Column(
       children: [
@@ -79,7 +76,7 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
             value: _selectedPeriodId,
             isExpanded: true,
             decoration: InputDecoration(
-              labelText: 'Periode Penilaian',
+              labelText: 'Periode Penilaian & Laporan',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               isDense: true,
@@ -170,106 +167,72 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
                                 ),
                               ],
                             ),
+                            if (catatan.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                'Catatan KPA: $catatan',
+                                style: const TextStyle(color: Color(0xFFE0F2FE), fontSize: 12),
+                              ),
+                            ],
                           ],
                         ),
                       ),
 
                       const SizedBox(height: 20),
 
-                      const Text(
-                        'Daftar Rencana Kinerja (RK)',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                      ),
-                      const SizedBox(height: 10),
-
-                      if (_plans.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: const Center(
-                            child: Text('Belum ada Rencana Kinerja pada periode ini.', style: TextStyle(color: Colors.grey)),
-                          ),
-                        )
-                      else
-                        ..._plans.map((p) {
-                          final capaian = (p['persentase_capaian'] ?? 0).toDouble();
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      // Download Hasil Kerja per Periode Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE0F2FE),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        p['kode']?.toString() ?? 'RK',
-                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Bobot ${p['bobot'] ?? 0}%',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
+                                Icon(Icons.download_for_offline_rounded, color: Color(0xFF059669), size: 24),
+                                SizedBox(width: 8),
                                 Text(
-                                  p['nama']?.toString() ?? '',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
-                                ),
-                                if (p['indikator'] != null && p['indikator'].toString().isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Indikator: ${p['indikator']}',
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                                const SizedBox(height: 10),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: LinearProgressIndicator(
-                                    value: (capaian / 100).clamp(0.0, 1.0),
-                                    minHeight: 7,
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      capaian >= 100 ? const Color(0xFF10B981) : const Color(0xFF0284C7),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Realisasi: ${p['total_realisasi'] ?? 0} / ${p['target']} ${p['satuan']}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                    ),
-                                    Text(
-                                      '${capaian.toInt()}%',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF0284C7)),
-                                    ),
-                                  ],
+                                  'Unduh Hasil Kerja Periode Ini',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                                 ),
                               ],
                             ),
-                          );
-                        }),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Unduh laporan lengkap hasil kerja harian Anda beserta informasi bukti dukung dan nilai CKP dalam format Excel (.xlsx).',
+                              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: _selectedPeriodId == null
+                                    ? null
+                                    : () {
+                                        final url = ApiService.getExcelExportUrl(periodId: _selectedPeriodId!);
+                                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                      },
+                                icon: const Icon(Icons.table_view_rounded),
+                                label: const Text(
+                                  'Download Hasil Kerja (.xlsx)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -278,4 +241,3 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
     );
   }
 }
-

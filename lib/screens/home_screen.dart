@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -77,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final todayActivities = (_data?['today_activities'] as List?) ?? [];
     final todayAvg = _data?['today_avg_capaian'] ?? 0;
     final monthStats = (_data?['month_stats'] as Map<String, dynamic>?) ?? {};
-    final planProgress = (_data?['plan_progress'] as List?) ?? [];
     final ckpScore = _data?['ckp_score'] as Map<String, dynamic>?;
     final period = _data?['period'] as Map<String, dynamic>?;
 
@@ -330,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            act['pk_nama'] != null ? 'RK: ${act['pk_nama']}' : 'Tanpa RK',
+                            'Status: ${act['status_kegiatan'] ?? 'selesai'}',
                             style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                           ),
                         ],
@@ -343,74 +343,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 16),
 
-          // Progress Rencana Kinerja (RK)
-          const Text(
-            'Progres Rencana Kinerja (RK)',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 10),
-          if (planProgress.isEmpty)
+          // Download Hasil Kerja Periode Ini Card
+          if (period != null && period['id'] != null)
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: const Center(
-                child: Text('Belum ada Rencana Kinerja pada periode ini.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-              ),
-            )
-          else
-            ...planProgress.map((p) {
-              final pct = (p['persentase'] ?? 0).toDouble();
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${p['kode'] ?? 'RK'} · ${p['nama']}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                        ),
-                        Text(
-                          '${pct.toInt()}%',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0284C7)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: (pct / 100).clamp(0.0, 1.0),
-                        minHeight: 7,
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          pct >= 100 ? const Color(0xFF10B981) : const Color(0xFF0284C7),
-                        ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.download_for_offline_rounded, color: Color(0xFF059669), size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Unduh Hasil Kerja per Periode',
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Unduh rekap seluruh kegiatan harian Anda pada periode ${period['nama']} dalam format Excel (.xlsx).',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final url = ApiService.getExcelExportUrl(periodId: (period['id'] as num).toInt());
+                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      },
+                      icon: const Icon(Icons.table_view_rounded, size: 18, color: Color(0xFF059669)),
+                      label: Text(
+                        'Download Excel (${period['nama']})',
+                        style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF059669)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Realisasi: ${p['total_realisasi'] ?? 0} / ${p['target']} ${p['satuan']}',
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              );
-            }),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

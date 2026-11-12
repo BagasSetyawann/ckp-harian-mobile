@@ -220,6 +220,7 @@ class ApiService {
     required String fileName,
     required Uint8List bytes,
     required String mimeType,
+    String? keterangan,
   }) async {
     // 1. Minta signed URL ke backend
     final urlRes = await http
@@ -251,7 +252,7 @@ class ApiService {
       throw ApiException('Gagal mengunggah file ke storage (${putRes.statusCode})');
     }
 
-    // 3. Simpan metadata file di backend
+    // 3. Simpan metadata file di backend (termasuk koordinat GPS & timestamp pada keterangan)
     final saveRes = await http
         .post(
           Uri.parse('$_baseUrl/evidence/file/$activityId'),
@@ -261,11 +262,18 @@ class ApiService {
             'nama_file': fileName,
             'mime_type': mimeType,
             'ukuran_file': bytes.length,
+            'keterangan': keterangan,
           }),
         )
         .timeout(const Duration(seconds: 25));
 
     return _handleResponse(saveRes) as Map<String, dynamic>;
+  }
+
+  static String getExcelExportUrl({required int periodId}) {
+    final empId = ApiService.employeeId;
+    final empParam = empId != null ? '&employee_id=$empId' : '';
+    return '$_baseUrl/export/excel?period_id=$periodId$empParam&token=${Uri.encodeComponent(_token ?? '')}';
   }
 
   static Future<Map<String, dynamic>> addEvidenceLink({

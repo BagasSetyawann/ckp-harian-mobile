@@ -3,12 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../utils/photo_watermark.dart';
 
 class PendingFileItem {
   final String name;
   final Uint8List bytes;
   final String mimeType;
-  PendingFileItem({required this.name, required this.bytes, required this.mimeType});
+  final String? keterangan;
+
+  PendingFileItem({
+    required this.name,
+    required this.bytes,
+    required this.mimeType,
+    this.keterangan,
+  });
 }
 
 class PendingLinkItem {
@@ -32,9 +40,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
   final _formKey = GlobalKey<FormState>();
 
   List<dynamic> _periods = [];
-  List<dynamic> _plans = [];
   int? _selectedPeriodId;
-  int? _selectedPlanId;
   String _tanggal = DateTime.now().toIso8601String().split('T')[0];
   String _statusKegiatan = 'selesai';
 
@@ -50,6 +56,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
 
   bool _loadingInit = true;
   bool _submitting = false;
+  bool _processingCamera = false;
 
   @override
   void initState() {
@@ -66,7 +73,6 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
       if (widget.editActivity != null) {
         final act = widget.editActivity!;
         _selectedPeriodId = (act['period_id'] as num?)?.toInt();
-        _selectedPlanId = (act['performance_plan_id'] as num?)?.toInt();
         _tanggal = (act['tanggal'] ?? _tanggal).toString();
         _statusKegiatan = (act['status_kegiatan'] ?? 'selesai').toString();
         _namaController.text = (act['nama_kegiatan'] ?? '').toString();
@@ -86,10 +92,6 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
         active ??= periods.first as Map<String, dynamic>;
         _selectedPeriodId = (active['id'] as num?)?.toInt();
       }
-
-      if (_selectedPeriodId != null) {
-        _plans = await ApiService.getPerformancePlans(periodId: _selectedPeriodId);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
@@ -97,31 +99,6 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
     } finally {
       if (mounted) setState(() => _loadingInit = false);
     }
-  }
-
-  Future<void> _onPeriodChanged(int? periodId) async {
-    setState(() {
-      _selectedPeriodId = periodId;
-      _selectedPlanId = null;
-    });
-    if (periodId != null) {
-      try {
-        final plans = await ApiService.getPerformancePlans(periodId: periodId);
-        if (mounted) setState(() => _plans = plans);
-      } catch (_) {}
-    }
-  }
-
-  void _onPlanChanged(int? planId) {
-    setState(() {
-      _selectedPlanId = planId;
-      if (planId != null) {
-        final plan = _plans.firstWhere((p) => p['id'] == planId, orElse: () => null);
-        if (plan != null && (plan['satuan'] ?? '').toString().isNotEmpty) {
-          _satuanController.text = plan['satuan'].toString();
-        }
-      }
-    });
   }
 
   int get _calculatedCapaian {
@@ -163,18 +140,36 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
   Future<void> _pickCameraPhoto() async {
     try {
       final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 82);
+      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
       if (photo == null) return;
-      final bytes = await photo.readAsBytes();
+
+      setState(() => _processingCamera = true);
+      final rawBytes = await photo.readAsBytes();
+      final watermarked = await PhotoWatermark.stampCameraPhoto(rawBytes);
+
+      if (!mounted) return;
       setState(() {
         _pendingFiles.add(PendingFileItem(
-          name: photo.name.isNotEmpty ? photo.name : 'foto_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          bytes: bytes,
-          mimeType: _guessMimeType(photo.name),
+          name: watermarked.fileName,
+          bytes: watermarked.bytes,
+          mimeType: watermarked.mimeType,
+          keterangan: watermarked.metadataText,
         ));
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto kamera berhasil diberi Geotag & Timestamp!\n${watermarked.metadataText}'),
+          backgroundColor: const Color(0xFF059669),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil foto: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil foto: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _processingCamera = false);
     }
   }
 
@@ -199,7 +194,9 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memilih file: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memilih file: $e')));
+      }
     }
   }
 
@@ -273,7 +270,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
     try {
       final payload = <String, dynamic>{
         'period_id': _selectedPeriodId,
-        'performance_plan_id': _selectedPlanId,
+        'performance_plan_id': null,
         'tanggal': _tanggal,
         'nama_kegiatan': _namaController.text.trim(),
         'deskripsi': _deskripsiController.text.trim(),
@@ -293,13 +290,14 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
         activityId = created['id'] as int;
       }
 
-      // Upload bukti dukung (jika ada)
+      // Upload bukti dukung (jika ada) beserta keterangan Geotag & Timestamp
       for (final file in _pendingFiles) {
         await ApiService.uploadEvidenceFile(
           activityId: activityId,
           fileName: file.name,
           bytes: file.bytes,
           mimeType: file.mimeType,
+          keterangan: file.keterangan,
         );
       }
 
@@ -368,13 +366,13 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.bolt_rounded, color: Color(0xFF0284C7), size: 24),
+                const Icon(Icons.camera_enhance_rounded, color: Color(0xFF0284C7), size: 24),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     isEdit
                         ? 'Perbarui data kegiatan harian Anda.'
-                        : 'Isi kegiatan harian & lampirkan bukti dukung dalam satu langkah praktis.',
+                        : 'Isi kegiatan harian & ambil foto bukti ber-koordinat GPS + Timestamp otomatis.',
                     style: const TextStyle(fontSize: 12.5, color: Color(0xFF0369A1), fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -401,7 +399,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                       child: Text(p['nama'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5)),
                     );
                   }).toList(),
-                  onChanged: _onPeriodChanged,
+                  onChanged: (v) => setState(() => _selectedPeriodId = v),
                 ),
               ),
               const SizedBox(width: 10),
@@ -431,32 +429,6 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-
-          // Rencana Kinerja (RK)
-          DropdownButtonFormField<int?>(
-            value: _selectedPlanId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'Rencana Kinerja / RK (Opsional)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            ),
-            items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('— Tanpa RK —', style: TextStyle(fontSize: 13.5))),
-              ..._plans.map((p) {
-                return DropdownMenuItem<int?>(
-                  value: p['id'] as int,
-                  child: Text(
-                    '${p['kode'] ?? 'RK'} — ${p['nama']}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5),
-                  ),
-                );
-              }),
-            ],
-            onChanged: _onPlanChanged,
           ),
           const SizedBox(height: 14),
 
@@ -603,18 +575,32 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Ambil foto dokumentasi langsung atau pilih dokumen/link.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                  'Foto dari Kamera akan otomatis merekam Titik Koordinat GPS & Timestamp langsung pada gambar.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: _pickCameraPhoto,
-                      icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                      label: const Text('Kamera', style: TextStyle(fontSize: 12.5)),
+                    ElevatedButton.icon(
+                      onPressed: _processingCamera ? null : _pickCameraPhoto,
+                      icon: _processingCamera
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.camera_alt_rounded, size: 18),
+                      label: Text(
+                        _processingCamera ? 'Merekam GPS...' : 'Kamera (GPS + Timestamp)',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed: _pickFile,
@@ -638,15 +624,51 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                 ..._pendingFiles.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final f = entry.value;
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.insert_drive_file_outlined, color: Color(0xFF0284C7)),
-                    title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5)),
-                    subtitle: Text('${(f.bytes.length / 1024).toStringAsFixed(1)} KB', style: const TextStyle(fontSize: 11)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                      onPressed: () => setState(() => _pendingFiles.removeAt(idx)),
+                  final isImage = f.mimeType.startsWith('image/');
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        if (isImage)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              f.bytes,
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          const Icon(Icons.insert_drive_file_outlined, color: Color(0xFF0284C7), size: 32),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              Text('${(f.bytes.length / 1024).toStringAsFixed(1)} KB', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              if (f.keterangan != null) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  f.keterangan!,
+                                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                          onPressed: () => setState(() => _pendingFiles.removeAt(idx)),
+                        ),
+                      ],
                     ),
                   );
                 }),
@@ -703,4 +725,3 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
     );
   }
 }
-
