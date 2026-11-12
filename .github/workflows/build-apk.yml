@@ -24,28 +24,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate Android Platform Files & Inject Permissions
-        run: |
-          cp pubspec.yaml /tmp/pubspec.yaml
-          cp -r lib /tmp/lib
-          flutter create . --project-name si_ckp_mobile --platforms=android
-          cp /tmp/pubspec.yaml pubspec.yaml
-          rm -rf lib test
-          cp -r /tmp/lib lib
-          # Pastikan izin INTERNET ada di AndroidManifest.xml
-          if ! grep -q "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml; then
-            sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\n    <application/' android/app/src/main/AndroidManifest.xml
-          fi
-          # Paksa compileSdk >= 36 untuk semua plugin (fix error AAR metadata file_picker)
-          cp ci/force_sdk.gradle android/force_sdk.gradle
-          if [ -f android/build.gradle.kts ]; then
-            sed -i '1i apply(from = "force_sdk.gradle")' android/build.gradle.kts
-            head -n 3 android/build.gradle.kts
-          else
-            sed -i '1i apply from: "force_sdk.gradle"' android/build.gradle
-            head -n 3 android/build.gradle
-          fi
-
       - name: Install Dependencies
         run: flutter pub get
 
