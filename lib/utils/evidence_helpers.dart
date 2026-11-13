@@ -140,6 +140,10 @@ class EvidenceHelpers {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: p.teal,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 final j = judulCtrl.text.trim();
                 final u = urlCtrl.text.trim();
@@ -153,7 +157,7 @@ class EvidenceHelpers {
                   ),
                 );
               },
-              child: const Text('Tambahkan'),
+              child: const Text('BERES! Tambahkan'),
             ),
           ],
         );
@@ -162,3 +166,4 @@ class EvidenceHelpers {
     return res;
   }
 }
+

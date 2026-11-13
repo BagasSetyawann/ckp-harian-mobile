@@ -113,9 +113,9 @@ class PhotoWatermark {
       final textSpan = TextSpan(
         children: [
           TextSpan(
-            text: '📱 SI-CKP Mobile — Dokumentasi Kegiatan Harian\n',
+            text: '📱 KASI JADI — Jurnal Aktivitas & Kinerja\n',
             style: TextStyle(
-              color: const Color(0xFF38BDF8),
+              color: const Color(0xFF00B4D8),
               fontSize: fontSizeTitle,
               fontWeight: FontWeight.bold,
               height: 1.35,

@@ -217,7 +217,7 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                         MonoPill(text: (act['tanggal'] ?? '-').toString()),
                                         const SizedBox(width: 8),
                                         StatusDotBadge(
-                                          label: isDone ? 'Selesai' : 'Proses',
+                                          label: isDone ? 'BERES!' : 'Proses',
                                           color: isDone ? p.success : p.warning,
                                           bgColor: isDone ? p.successBg : p.warningBg,
                                         ),
@@ -258,19 +258,19 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: p.infoBg,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: p.info.withValues(alpha: 0.25)),
+                                          borderRadius: BorderRadius.circular(9),
+                                          border: Border.all(color: p.border, width: 1.4),
                                         ),
                                         child: Row(
                                           children: [
-                                            Icon(Icons.location_on_outlined, size: 14, color: p.info),
+                                            Icon(Icons.location_on_rounded, size: 14, color: p.info),
                                             const SizedBox(width: 6),
                                             Expanded(
                                               child: Text(
                                                 gpsMeta,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: AppTheme.mono(size: 10.5, color: p.info),
+                                                style: AppTheme.mono(size: 10.5, weight: FontWeight.w600, color: p.info),
                                               ),
                                             ),
                                           ],
@@ -279,29 +279,29 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                     ],
                                     const SizedBox(height: 12),
                                     Divider(height: 1, color: p.border),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 10),
                                     Row(
                                       children: [
                                         InkWell(
                                           onTap: () => _openEvidenceSheet(act),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(9),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: p.surfaceMuted,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: p.border),
+                                              color: p.tealBg,
+                                              borderRadius: BorderRadius.circular(9),
+                                              border: Border.all(color: p.border, width: 1.5),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(Icons.attach_file_rounded, size: 15, color: p.primary),
+                                                Icon(Icons.attach_file_rounded, size: 15, color: p.success),
                                                 const SizedBox(width: 5),
                                                 Text(
                                                   '$totalBukti Bukti',
                                                   style: TextStyle(
                                                     fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
+                                                    fontWeight: FontWeight.w800,
                                                     color: p.textPrimary,
                                                   ),
                                                 ),
@@ -310,9 +310,8 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                           ),
                                         ),
                                         const Spacer(),
-                                        IconButton(
-                                          tooltip: 'Edit',
-                                          onPressed: () {
+                                        InkWell(
+                                          onTap: () {
                                             Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (_) => InputKegiatanScreen(
@@ -325,14 +324,30 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                               ),
                                             );
                                           },
-                                          icon: Icon(Icons.edit_outlined, size: 19, color: p.textSecondary),
-                                          visualDensity: VisualDensity.compact,
+                                          borderRadius: BorderRadius.circular(9),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(7),
+                                            decoration: BoxDecoration(
+                                              color: p.surface,
+                                              borderRadius: BorderRadius.circular(9),
+                                              border: Border.all(color: p.border, width: 1.5),
+                                            ),
+                                            child: Icon(Icons.edit_rounded, size: 16, color: p.textPrimary),
+                                          ),
                                         ),
-                                        IconButton(
-                                          tooltip: 'Hapus',
-                                          onPressed: () => _deleteActivity(act),
-                                          icon: Icon(Icons.delete_outline_rounded, size: 19, color: p.danger),
-                                          visualDensity: VisualDensity.compact,
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () => _deleteActivity(act),
+                                          borderRadius: BorderRadius.circular(9),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(7),
+                                            decoration: BoxDecoration(
+                                              color: p.danger,
+                                              borderRadius: BorderRadius.circular(9),
+                                              border: Border.all(color: p.border, width: 1.5),
+                                            ),
+                                            child: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -523,26 +538,38 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: KjNeoButton(
+                      label: 'Kamera',
+                      icon: Icons.camera_alt_rounded,
+                      variant: KjButtonVariant.orange,
+                      pill: false,
+                      expand: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       onPressed: _uploading ? null : _uploadCameraGps,
-                      icon: Icon(Icons.camera_alt_outlined, size: 16, color: p.primary),
-                      label: const Text('Kamera GPS', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: KjNeoButton(
+                      label: 'File',
+                      icon: Icons.upload_file_rounded,
+                      variant: KjButtonVariant.teal,
+                      pill: false,
+                      expand: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       onPressed: _uploading ? null : _uploadFiles,
-                      icon: Icon(Icons.upload_file_outlined, size: 16, color: p.textSecondary),
-                      label: const Text('File', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: KjNeoButton(
+                      label: 'Tautan',
+                      icon: Icons.link_rounded,
+                      variant: KjButtonVariant.secondary,
+                      pill: false,
+                      expand: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       onPressed: _uploading ? null : _addLink,
-                      icon: Icon(Icons.link_rounded, size: 16, color: p.info),
-                      label: const Text('Tautan', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],

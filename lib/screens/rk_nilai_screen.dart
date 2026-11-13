@@ -142,132 +142,151 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
                         children: [
-                          // Executive Score Showcase Card
+                          // KASI JADI Score Showcase Card
                           Container(
-                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [p.heroStart, p.heroEnd],
                               ),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: p.heroBorder),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'NILAI AKHIR CKP',
-                                      style: AppTheme.mono(
-                                        size: 11,
-                                        weight: FontWeight.w600,
-                                        color: const Color(0xFF94A3B8),
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.14),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        status.toUpperCase(),
-                                        style: AppTheme.mono(
-                                          size: 10.5,
-                                          weight: FontWeight.w600,
-                                          color: status == 'final'
-                                              ? const Color(0xFF34D399)
-                                              : const Color(0xFF38BDF8),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 14),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      nilaiCkp.toStringAsFixed(1),
-                                      style: AppTheme.mono(
-                                        size: 42,
-                                        weight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '/ 100',
-                                      style: AppTheme.mono(
-                                        size: 14,
-                                        weight: FontWeight.w500,
-                                        color: const Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(11),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'Capaian Kinerja',
-                                              style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              nilaiPk.toStringAsFixed(1),
-                                              style: AppTheme.mono(
-                                                size: 16,
-                                                weight: FontWeight.w700,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(width: 1, height: 30, color: Colors.white.withValues(alpha: 0.14)),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'Perilaku Kerja',
-                                              style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              nilaiPerilaku.toStringAsFixed(1),
-                                              style: AppTheme.mono(
-                                                size: 16,
-                                                weight: FontWeight.w700,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: p.border, width: 2),
+                              boxShadow: [
+                                BoxShadow(color: p.shadow, offset: const Offset(4, 5)),
                               ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'NILAI AKHIR CKP',
+                                              style: AppTheme.mono(
+                                                size: 11,
+                                                weight: FontWeight.w700,
+                                                color: Colors.white.withAlpha(210),
+                                                letterSpacing: 1.0,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: status == 'final'
+                                                    ? const Color(0xFF00B4D8)
+                                                    : const Color(0xFFFF6B35),
+                                                borderRadius: BorderRadius.circular(999),
+                                                border: Border.all(color: const Color(0xFF1E293B), width: 1.5),
+                                              ),
+                                              child: Text(
+                                                status == 'final' ? 'BERES! FINAL' : status.toUpperCase(),
+                                                style: AppTheme.mono(
+                                                  size: 10.5,
+                                                  weight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 14),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                                          textBaseline: TextBaseline.alphabetic,
+                                          children: [
+                                            Text(
+                                              nilaiCkp.toStringAsFixed(1),
+                                              style: AppTheme.mono(
+                                                size: 42,
+                                                weight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '/ 100',
+                                              style: AppTheme.mono(
+                                                size: 14,
+                                                weight: FontWeight.w600,
+                                                color: Colors.white.withAlpha(190),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withAlpha(30),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: Colors.white.withAlpha(80), width: 1.5),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Capaian Kinerja',
+                                                      style: TextStyle(fontSize: 11.5, color: Colors.white.withAlpha(210)),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      nilaiPk.toStringAsFixed(1),
+                                                      style: AppTheme.mono(
+                                                        size: 16,
+                                                        weight: FontWeight.w700,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Container(width: 1.5, height: 30, color: Colors.white.withAlpha(80)),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Perilaku Kerja',
+                                                      style: TextStyle(fontSize: 11.5, color: Colors.white.withAlpha(210)),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      nilaiPerilaku.toStringAsFixed(1),
+                                                      style: AppTheme.mono(
+                                                        size: 16,
+                                                        weight: FontWeight.w700,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const KjTenunStrip(
+                                    height: 8,
+                                    opacity: 0.25,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
@@ -346,13 +365,19 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
                                             ],
                                           ),
                                           const SizedBox(height: 6),
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(4),
-                                            child: LinearProgressIndicator(
-                                              value: (nilai / 100.0).clamp(0.0, 1.0),
-                                              minHeight: 6,
-                                              backgroundColor: p.surfaceMuted,
-                                              color: kode == 'PK' ? p.primary : p.success,
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(999),
+                                              border: Border.all(color: p.border, width: 1.2),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(999),
+                                              child: LinearProgressIndicator(
+                                                value: (nilai / 100.0).clamp(0.0, 1.0),
+                                                minHeight: 8,
+                                                backgroundColor: p.surfaceMuted,
+                                                color: kode == 'PK' ? p.primary : p.teal,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -397,11 +422,13 @@ class _RkNilaiScreenState extends State<RkNilaiScreen> {
 
                           if (_selectedPeriodId != null) ...[
                             const SizedBox(height: 14),
-                            OutlinedButton.icon(
+                            KjNeoButton(
+                              label: 'Unduh Rekap Excel (.xlsx) Periode Ini',
+                              icon: Icons.table_view_rounded,
+                              variant: KjButtonVariant.teal,
+                              expand: true,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
                               onPressed: _downloadExcel,
-                              icon: Icon(Icons.table_view_outlined, size: 18, color: p.success),
-                              label: const Text('Unduh Rekap Excel (.xlsx) Periode Ini'),
-                              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
                             ),
                           ],
                         ],

@@ -13,6 +13,26 @@ class ChangelogScreen extends StatefulWidget {
 class _ChangelogScreenState extends State<ChangelogScreen> {
   static const List<Map<String, dynamic>> _fallbackChangelogs = [
     {
+      'versi': 'v1.4.0',
+      'judul': 'Redesign & Rebranding KASI JADI (Neo-Brutalism)',
+      'tanggal': '2026-11-13',
+      'tipe': 'major',
+      'perubahan': [
+        {
+          'kategori': 'Perubahan',
+          'platform': 'Web & Mobile',
+          'deskripsi':
+              'Transformasi penuh ke identitas KASI JADI (Kanal Sistem Jurnal Aktivitas Dan Kinerja) bergaya Neo-Brutalism dengan palet Biru Elektrik, Toska, dan Oranye Hangat serta aksen tenun geometris.',
+        },
+        {
+          'kategori': 'Fitur Baru',
+          'platform': 'Web & Mobile',
+          'deskripsi':
+              'Menghadirkan ikon outline kustom KJ, tombol GAS ISI! dan BERES!, serta banner pengingat interaktif harian.',
+        },
+      ],
+    },
+    {
       'versi': 'v1.3.0',
       'judul': 'Fitur Changelog Publik & Penghapusan Verifikasi KPA',
       'tanggal': '2026-11-12',
@@ -42,7 +62,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
           'kategori': 'Fitur Baru',
           'platform': 'Mobile',
           'deskripsi':
-              'Kamera bukti dukung pada SI-CKP Mobile otomatis menangkap koordinat GPS & Timestamp lalu mencetak watermark langsung pada foto.',
+              'Kamera bukti dukung pada aplikasi mobile otomatis menangkap koordinat GPS & Timestamp lalu mencetak watermark langsung pada foto.',
         },
         {
           'kategori': 'Fitur Baru',
@@ -60,7 +80,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
     },
     {
       'versi': 'v1.1.0',
-      'judul': 'Peluncuran Aplikasi SI-CKP Mobile (Android) & Integrasi Cloud',
+      'judul': 'Peluncuran Aplikasi Mobile Android & Integrasi Cloud',
       'tanggal': '2026-11-12',
       'tipe': 'major',
       'perubahan': [
@@ -68,13 +88,13 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
           'kategori': 'Fitur Baru',
           'platform': 'Mobile',
           'deskripsi':
-              'Rilis perdana aplikasi SI-CKP Mobile Android dengan fitur Beranda, Input Kegiatan, Bukti Dukung, Riwayat, dan Nilai CKP.',
+              'Rilis perdana aplikasi mobile Android dengan fitur Beranda, Input Kegiatan, Bukti Dukung, Riwayat, dan Nilai CKP.',
         },
       ],
     },
     {
       'versi': 'v1.0.0',
-      'judul': 'Rilis Awal Sistem Informasi CKP Harian (SI-CKP)',
+      'judul': 'Rilis Awal Sistem Jurnal Aktivitas & Kinerja Harian',
       'tanggal': '2026-11-02',
       'tipe': 'major',
       'perubahan': [
@@ -82,7 +102,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
           'kategori': 'Fitur Baru',
           'platform': 'Web & Backend',
           'deskripsi':
-              'Peluncuran awal SI-CKP meliputi pencatatan kegiatan harian pegawai, bukti dukung, kalender pengisian, penilaian perilaku, dan nilai CKP.',
+              'Peluncuran awal sistem pencatatan kegiatan harian pegawai, bukti dukung, kalender pengisian, penilaian perilaku, dan nilai CKP.',
         },
       ],
     },
@@ -147,66 +167,84 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           children: [
-            // Executive Header Banner
+            // KASI JADI Header Banner
             Container(
-              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [p.heroStart, p.heroEnd],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: p.heroBorder),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(11),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    child: const Icon(Icons.auto_awesome_outlined, color: Color(0xFF38BDF8), size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'Changelog SI-CKP',
-                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                _items.isNotEmpty ? (_items.first['versi'] ?? 'v1.3.0').toString() : 'v1.3.0',
-                                style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: const Color(0xFF38BDF8)),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _fromCache
-                              ? 'Menampilkan catatan rilis lokal aplikasi.'
-                              : 'Catatan rilis resmi Web, Mobile & Backend.',
-                          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.78)),
-                        ),
-                      ],
-                    ),
-                  ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: p.border, width: 2),
+                boxShadow: [
+                  BoxShadow(color: p.shadow, offset: const Offset(4, 5)),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(34),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withAlpha(90), width: 1.5),
+                            ),
+                            child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFF6B35), size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Changelog KASI JADI',
+                                      style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00B4D8),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(color: const Color(0xFF1E293B), width: 1.5),
+                                      ),
+                                      child: Text(
+                                        _items.isNotEmpty ? (_items.first['versi'] ?? 'v1.4.0').toString() : 'v1.4.0',
+                                        style: AppTheme.mono(size: 11, weight: FontWeight.w700, color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _fromCache
+                                      ? 'Menampilkan catatan rilis lokal aplikasi.'
+                                      : 'Catatan rilis resmi Web, Mobile & Backend.',
+                                  style: TextStyle(fontSize: 12, color: Colors.white.withAlpha(210)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const KjTenunStrip(
+                      height: 8,
+                      opacity: 0.25,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -243,18 +281,18 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: isLatest ? p.primaryDeep : p.surface,
-                                      borderRadius: BorderRadius.circular(7),
-                                      border: Border.all(color: isLatest ? p.heroBorder : p.borderStrong),
+                                      color: isLatest ? p.primary : p.surface,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: p.border, width: 1.5),
                                     ),
                                     child: Text(
                                       (rel['versi'] ?? '').toString(),
                                       style: AppTheme.mono(
                                         size: 11.5,
-                                        weight: FontWeight.w600,
-                                        color: isLatest ? Colors.white : p.textSecondary,
+                                        weight: FontWeight.w700,
+                                        color: isLatest ? Colors.white : p.textPrimary,
                                       ),
                                     ),
                                   ),

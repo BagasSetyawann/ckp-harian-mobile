@@ -392,8 +392,8 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: p.surfaceMuted,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: p.border),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: p.border, width: 1.5),
                   ),
                   child: Column(
                     children: [
@@ -401,23 +401,29 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                         children: [
                           Text(
                             'Capaian Terhitung',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: p.textPrimary),
                           ),
                           const Spacer(),
                           MonoPill(
                             text: '$pct%',
-                            color: pct >= 80 ? p.success : p.primary,
+                            color: pct >= 80 ? p.success : (pct >= 50 ? p.primary : p.orange),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: pct / 100.0,
-                          minHeight: 6,
-                          backgroundColor: p.border,
-                          color: pct >= 80 ? p.success : p.primary,
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: p.border, width: 1.2),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: pct / 100.0,
+                            minHeight: 8,
+                            backgroundColor: p.surface,
+                            color: pct >= 80 ? p.teal : (pct >= 50 ? p.primary : p.orange),
+                          ),
                         ),
                       ),
                     ],
@@ -427,35 +433,39 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
 
                 Text(
                   'Status Pelaksanaan',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: p.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('Selesai'),
+                      label: const Text('BERES!'),
                       selected: _status == 'selesai',
                       onSelected: (_) => setState(() => _status = 'selesai'),
-                      selectedColor: p.successBg,
+                      selectedColor: p.teal,
+                      backgroundColor: p.surface,
+                      checkmarkColor: Colors.white,
                       labelStyle: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: _status == 'selesai' ? p.success : p.textSecondary,
+                        fontWeight: FontWeight.w800,
+                        color: _status == 'selesai' ? Colors.white : p.textPrimary,
                       ),
-                      side: BorderSide(color: _status == 'selesai' ? p.success : p.border),
+                      side: BorderSide(color: p.border, width: 1.5),
                     ),
                     ChoiceChip(
                       label: const Text('Dalam Proses'),
                       selected: _status == 'proses',
                       onSelected: (_) => setState(() => _status = 'proses'),
-                      selectedColor: p.warningBg,
+                      selectedColor: p.orange,
+                      backgroundColor: p.surface,
+                      checkmarkColor: Colors.white,
                       labelStyle: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: _status == 'proses' ? p.warning : p.textSecondary,
+                        fontWeight: FontWeight.w800,
+                        color: _status == 'proses' ? Colors.white : p.textPrimary,
                       ),
-                      side: BorderSide(color: _status == 'proses' ? p.warning : p.border),
+                      side: BorderSide(color: p.border, width: 1.5),
                     ),
                   ],
                 ),
@@ -493,36 +503,37 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: KjNeoButton(
+                        label: _capturingGps ? 'Lokasi...' : 'Kamera GPS',
+                        icon: Icons.camera_alt_rounded,
+                        variant: KjButtonVariant.orange,
+                        isLoading: _capturingGps,
+                        pill: false,
+                        expand: true,
                         onPressed: _capturingGps ? null : _captureCameraGps,
-                        icon: _capturingGps
-                            ? SizedBox(
-                                width: 15,
-                                height: 15,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: p.primary),
-                              )
-                            : Icon(Icons.camera_alt_outlined, size: 17, color: p.primary),
-                        label: Text(_capturingGps ? 'Lokasi...' : 'Kamera GPS'),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: KjNeoButton(
+                        label: 'Pilih File',
+                        icon: Icons.upload_file_rounded,
+                        variant: KjButtonVariant.teal,
+                        pill: false,
+                        expand: true,
                         onPressed: _pickDocuments,
-                        icon: Icon(Icons.upload_file_outlined, size: 17, color: p.textSecondary),
-                        label: const Text('Pilih File'),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _addLink,
-                    icon: Icon(Icons.link_rounded, size: 17, color: p.info),
-                    label: const Text('Tambah Tautan URL'),
-                  ),
+                const SizedBox(height: 10),
+                KjNeoButton(
+                  label: 'Tambah Tautan URL',
+                  icon: Icons.link_rounded,
+                  variant: KjButtonVariant.secondary,
+                  pill: false,
+                  expand: true,
+                  onPressed: _addLink,
                 ),
 
                 if (_pendingFiles.isNotEmpty || _pendingLinks.isNotEmpty) ...[
@@ -628,20 +639,14 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
 
           const SizedBox(height: 18),
 
-          ElevatedButton(
+          KjNeoButton(
+            label: _isEditing ? 'BERES! Perbarui' : 'GAS SIMPAN!',
+            icon: Icons.check_circle_outline_rounded,
+            variant: _isEditing ? KjButtonVariant.teal : KjButtonVariant.orange,
+            isLoading: _submitting,
+            expand: true,
+            padding: const EdgeInsets.symmetric(vertical: 14),
             onPressed: _submitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: p.primary,
-              foregroundColor: p.onPrimary,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: _submitting
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.2, color: p.onPrimary),
-                  )
-                : Text(_isEditing ? 'Simpan Perubahan' : 'Simpan Kegiatan Harian'),
           ),
         ],
       ),

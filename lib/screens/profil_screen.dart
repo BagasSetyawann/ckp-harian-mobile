@@ -158,17 +158,20 @@ class _ProfilScreenState extends State<ProfilScreen> {
           child: Row(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
-                  color: p.primaryDeep,
+                  color: p.primary,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: p.heroBorder),
+                  border: Border.all(color: p.border, width: 2),
+                  boxShadow: [
+                    BoxShadow(color: p.shadow, offset: const Offset(2, 3)),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   _initials(nama),
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(width: 14),
@@ -256,9 +259,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
               Divider(height: 1, color: p.border),
               ListTile(
-                leading: Icon(Icons.auto_awesome_outlined, size: 20, color: p.primary),
-                title: Text('Riwayat Pembaruan (Changelog)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: p.textPrimary)),
-                subtitle: Text('Catatan rilis fitur SI-CKP v1.3.0', style: TextStyle(fontSize: 12, color: p.textMuted)),
+                leading: Icon(Icons.auto_awesome_rounded, size: 20, color: p.orange),
+                title: Text('Riwayat Pembaruan (Changelog)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.textPrimary)),
+                subtitle: Text('Catatan rilis KASI JADI v1.4.0', style: TextStyle(fontSize: 12, color: p.textMuted)),
                 trailing: Icon(Icons.chevron_right_rounded, color: p.textMuted),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ChangelogScreen()),
@@ -278,15 +281,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
         const SizedBox(height: 18),
 
-        OutlinedButton.icon(
+        KjNeoButton(
+          label: 'Keluar Aplikasi',
+          icon: Icons.logout_rounded,
+          variant: KjButtonVariant.danger,
+          expand: true,
+          padding: const EdgeInsets.symmetric(vertical: 13),
           onPressed: _confirmLogout,
-          icon: Icon(Icons.logout_rounded, size: 18, color: p.danger),
-          label: Text('Keluar Aplikasi', style: TextStyle(color: p.danger, fontWeight: FontWeight.w600)),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: p.danger.withValues(alpha: 0.4)),
-            backgroundColor: p.dangerBg,
-            minimumSize: const Size.fromHeight(46),
-          ),
         ),
       ],
     );

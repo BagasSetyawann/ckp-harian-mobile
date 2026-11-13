@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Masukkan URL endpoint backend SI-CKP.',
+                'Masukkan URL endpoint backend KASI JADI.',
                 style: TextStyle(fontSize: 12.5, color: p.textMuted),
               ),
               const SizedBox(height: 12),
@@ -133,22 +133,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: p.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: p.border),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: p.border, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(color: p.shadow, offset: const Offset(1.5, 2)),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.auto_awesome_outlined, size: 14, color: p.primary),
+                          Icon(Icons.auto_awesome_rounded, size: 14, color: p.orange),
                           const SizedBox(width: 6),
                           Text(
                             'Changelog',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.textSecondary),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textPrimary),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'v1.3',
-                            style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: p.textMuted),
+                            'v1.4',
+                            style: AppTheme.mono(size: 11, weight: FontWeight.w700, color: isDark ? p.info : p.primary),
                           ),
                         ],
                       ),
@@ -159,16 +162,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
                     onPressed: ThemeController.toggle,
                     style: IconButton.styleFrom(
-                      side: BorderSide(color: p.border),
+                      side: BorderSide(color: p.border, width: 1.5),
                       backgroundColor: p.surface,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       minimumSize: const Size(36, 36),
                       padding: EdgeInsets.zero,
                     ),
                     icon: Icon(
-                      isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                       size: 17,
-                      color: p.textSecondary,
+                      color: isDark ? const Color(0xFFFBBF24) : p.textPrimary,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -176,13 +179,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     tooltip: 'Pengaturan Server API',
                     onPressed: _showServerDialog,
                     style: IconButton.styleFrom(
-                      side: BorderSide(color: p.border),
+                      side: BorderSide(color: p.border, width: 1.5),
                       backgroundColor: p.surface,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       minimumSize: const Size(36, 36),
                       padding: EdgeInsets.zero,
                     ),
-                    icon: Icon(Icons.dns_outlined, size: 17, color: p.textSecondary),
+                    icon: Icon(Icons.dns_rounded, size: 17, color: p.textPrimary),
                   ),
                 ],
               ),
@@ -202,37 +205,51 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           children: [
                             Container(
-                              width: 44,
-                              height: 44,
+                              width: 54,
+                              height: 48,
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: p.primaryDeep,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: p.heroBorder),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: p.border, width: 2),
+                                boxShadow: [
+                                  BoxShadow(color: p.shadow, offset: const Offset(2.5, 3.5)),
+                                ],
                               ),
-                              child: const Icon(Icons.fact_check_rounded, color: Colors.white, size: 22),
+                              child: const KjLogoMark(width: 40, height: 34),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'DINAS STATISTIK DAERAH',
+                                    'JURNAL AKTIVITAS & KINERJA',
                                     style: AppTheme.mono(
-                                      size: 10.5,
-                                      weight: FontWeight.w600,
-                                      color: p.primary,
-                                      letterSpacing: 1.0,
+                                      size: 10,
+                                      weight: FontWeight.w700,
+                                      color: isDark ? p.info : p.primary,
+                                      letterSpacing: 0.9,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    'SI-CKP Mobile',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700,
-                                      color: p.textPrimary,
-                                      letterSpacing: -0.4,
+                                  Text.rich(
+                                    TextSpan(
+                                      text: 'KASI ',
+                                      style: TextStyle(
+                                        fontSize: 25,
+                                        fontWeight: FontWeight.w800,
+                                        color: p.textPrimary,
+                                        letterSpacing: -0.6,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: 'JADI',
+                                          style: TextStyle(
+                                            color: isDark ? p.info : const Color(0xFF0052FF),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -240,17 +257,40 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Masuk untuk mencatat kegiatan harian, melampirkan dokumentasi GPS, dan memantau nilai CKP.',
-                          style: TextStyle(fontSize: 13, color: p.textMuted, height: 1.45),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: p.tealBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: p.border, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.bolt_rounded, size: 16, color: p.orange),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Kasi Jadi Hari Ini, Sat-Set No Drama!',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: p.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 8),
+                        const KjTenunStrip(height: 10, opacity: 0.24),
+                        const SizedBox(height: 16),
 
                         // Login Card
                         HairlineCard(
                           padding: const EdgeInsets.all(20),
                           radius: 16,
+                          shadowOffset: const Offset(4, 5),
                           child: Form(
                             key: _formKey,
                             child: Column(
@@ -322,27 +362,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 18),
 
-                                ElevatedButton(
+                                KjNeoButton(
+                                  label: 'GAS MASUK!',
+                                  icon: Icons.arrow_forward_rounded,
+                                  variant: KjButtonVariant.orange,
+                                  isLoading: _loading,
+                                  expand: true,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
                                   onPressed: _loading ? null : () => _submit(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isDark ? p.primary : p.primary,
-                                    foregroundColor: p.onPrimary,
-                                    minimumSize: const Size.fromHeight(48),
-                                  ),
-                                  child: _loading
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2.2, color: p.onPrimary),
-                                        )
-                                      : const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text('Masuk'),
-                                            SizedBox(width: 8),
-                                            Icon(Icons.arrow_forward_rounded, size: 18),
-                                          ],
-                                        ),
                                 ),
 
                                 // Collapsible Demo Accounts
@@ -434,7 +461,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 20),
                         Text(
-                          '© 2026 SI-CKP · Dinas Statistik Daerah',
+                          '© 2026 KASI JADI · Kanal Sistem Jurnal Aktivitas Dan Kinerja',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 11.5, color: p.textMuted),
                         ),
