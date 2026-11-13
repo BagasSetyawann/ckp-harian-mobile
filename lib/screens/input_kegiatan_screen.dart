@@ -1,36 +1,18 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
-import '../utils/photo_watermark.dart';
-
-class PendingFileItem {
-  final String name;
-  final Uint8List bytes;
-  final String mimeType;
-  final String? keterangan;
-
-  PendingFileItem({
-    required this.name,
-    required this.bytes,
-    required this.mimeType,
-    this.keterangan,
-  });
-}
-
-class PendingLinkItem {
-  String judul;
-  String url;
-  String platform;
-  PendingLinkItem({this.judul = '', this.url = '', this.platform = 'Google Drive'});
-}
+import '../theme/app_theme.dart';
+import '../utils/evidence_helpers.dart';
+import '../widgets/ui_components.dart';
 
 class InputKegiatanScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
   final Map<String, dynamic>? editActivity;
 
-  const InputKegiatanScreen({super.key, this.onSuccess, this.editActivity});
+  const InputKegiatanScreen({
+    super.key,
+    this.onSuccess,
+    this.editActivity,
+  });
 
   @override
   State<InputKegiatanScreen> createState() => _InputKegiatanScreenState();
@@ -38,251 +20,189 @@ class InputKegiatanScreen extends StatefulWidget {
 
 class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _namaCtrl = TextEditingController();
+  final _deskripsiCtrl = TextEditingController();
+  final _targetCtrl = TextEditingController();
+  final _satuanCtrl = TextEditingController();
+  final _realisasiCtrl = TextEditingController();
+  final _catatanCtrl = TextEditingController();
 
   List<dynamic> _periods = [];
-  int? _selectedPeriodId;
-  String _tanggal = DateTime.now().toIso8601String().split('T')[0];
-  String _statusKegiatan = 'selesai';
+  int? _periodId;
+  late DateTime _tanggal;
+  String _status = 'selesai';
 
-  final _namaController = TextEditingController();
-  final _deskripsiController = TextEditingController();
-  final _targetController = TextEditingController();
-  final _satuanController = TextEditingController();
-  final _realisasiController = TextEditingController();
-  final _catatanController = TextEditingController();
-
-  final List<PendingFileItem> _pendingFiles = [];
-  final List<PendingLinkItem> _pendingLinks = [];
-
-  bool _loadingInit = true;
+  bool _loadingMeta = true;
   bool _submitting = false;
-  bool _processingCamera = false;
+  bool _capturingGps = false;
+
+  final List<PickedEvidenceFile> _pendingFiles = [];
+  final List<PendingLinkInput> _pendingLinks = [];
+
+  bool get _isEditing => widget.editActivity != null;
 
   @override
   void initState() {
     super.initState();
-    _initData();
+    final edit = widget.editActivity;
+    if (edit != null) {
+      _namaCtrl.text = (edit['nama_kegiatan'] ?? '').toString();
+      _deskripsiCtrl.text = (edit['deskripsi'] ?? '').toString();
+      _targetCtrl.text = edit['target'] != null ? edit['target'].toString() : '';
+      _satuanCtrl.text = (edit['satuan'] ?? '').toString();
+      _realisasiCtrl.text = edit['realisasi'] != null ? edit['realisasi'].toString() : '';
+      _catatanCtrl.text = (edit['catatan'] ?? '').toString();
+      _status = (edit['status_kegiatan'] ?? 'selesai').toString();
+      _periodId = edit['period_id'] as int?;
+      _tanggal = DateTime.tryParse((edit['tanggal'] ?? '').toString()) ?? DateTime.now();
+    } else {
+      _tanggal = DateTime.now();
+    }
+    _targetCtrl.addListener(_onMetricChanged);
+    _realisasiCtrl.addListener(_onMetricChanged);
+    _loadPeriods();
   }
 
-  Future<void> _initData() async {
-    setState(() => _loadingInit = true);
-    try {
-      final periods = await ApiService.getPeriods();
-      _periods = periods;
+  void _onMetricChanged() {
+    if (mounted) setState(() {});
+  }
 
-      if (widget.editActivity != null) {
-        final act = widget.editActivity!;
-        _selectedPeriodId = (act['period_id'] as num?)?.toInt();
-        _tanggal = (act['tanggal'] ?? _tanggal).toString();
-        _statusKegiatan = (act['status_kegiatan'] ?? 'selesai').toString();
-        _namaController.text = (act['nama_kegiatan'] ?? '').toString();
-        _deskripsiController.text = (act['deskripsi'] ?? '').toString();
-        _targetController.text = act['target']?.toString() ?? '';
-        _satuanController.text = (act['satuan'] ?? '').toString();
-        _realisasiController.text = act['realisasi']?.toString() ?? '';
-        _catatanController.text = (act['catatan'] ?? '').toString();
-      } else if (periods.isNotEmpty) {
-        Map<String, dynamic>? active;
-        for (final item in periods) {
-          if (item is Map<String, dynamic> && (item['is_active'] == 1 || item['status'] == 'aktif')) {
-            active = item;
-            break;
-          }
-        }
-        active ??= periods.first as Map<String, dynamic>;
-        _selectedPeriodId = (active['id'] as num?)?.toInt();
+  @override
+  void dispose() {
+    _namaCtrl.dispose();
+    _deskripsiCtrl.dispose();
+    _targetCtrl.dispose();
+    _satuanCtrl.dispose();
+    _realisasiCtrl.dispose();
+    _catatanCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPeriods() async {
+    try {
+      final list = await ApiService.getPeriods();
+      if (!mounted) return;
+      int? defaultId = _periodId;
+      if (defaultId == null && list.isNotEmpty) {
+        final active = list.cast<Map<String, dynamic>>().firstWhere(
+              (p) => p['is_active'] == 1 || p['status'] == 'aktif',
+              orElse: () => Map<String, dynamic>.from(list.first as Map),
+            );
+        defaultId = active['id'] as int?;
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _loadingInit = false);
+      setState(() {
+        _periods = list;
+        _periodId = defaultId;
+        _loadingMeta = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMeta = false);
     }
   }
 
-  int get _calculatedCapaian {
-    final t = double.tryParse(_targetController.text) ?? 0;
-    final r = double.tryParse(_realisasiController.text) ?? 0;
-    if (t <= 0) return 0;
+  int get _computedPercentage {
+    final t = double.tryParse(_targetCtrl.text.replaceAll(',', '.')) ?? 0;
+    final r = double.tryParse(_realisasiCtrl.text.replaceAll(',', '.')) ?? 0;
+    if (t <= 0) return _status == 'selesai' ? 100 : 0;
     return ((r / t) * 100).round().clamp(0, 100);
   }
 
-  String _guessMimeType(String filename) {
-    final ext = filename.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'pdf':
-        return 'application/pdf';
-      case 'doc':
-        return 'application/msword';
-      case 'docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case 'xls':
-        return 'application/vnd.ms-excel';
-      case 'xlsx':
-        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      case 'ppt':
-        return 'application/vnd.ms-powerpoint';
-      case 'pptx':
-        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-      case 'zip':
-        return 'application/zip';
-      default:
-        return 'application/octet-stream';
+  String get _formattedDate {
+    final y = _tanggal.year.toString().padLeft(4, '0');
+    final m = _tanggal.month.toString().padLeft(2, '0');
+    final d = _tanggal.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _tanggal,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && mounted) {
+      setState(() => _tanggal = picked);
     }
   }
 
-  Future<void> _pickCameraPhoto() async {
+  Future<void> _captureCameraGps() async {
+    setState(() => _capturingGps = true);
     try {
-      final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-      if (photo == null) return;
-
-      setState(() => _processingCamera = true);
-      final rawBytes = await photo.readAsBytes();
-      final watermarked = await PhotoWatermark.stampCameraPhoto(rawBytes);
-
-      if (!mounted) return;
-      setState(() {
-        _pendingFiles.add(PendingFileItem(
-          name: watermarked.fileName,
-          bytes: watermarked.bytes,
-          mimeType: watermarked.mimeType,
-          keterangan: watermarked.metadataText,
-        ));
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Foto kamera berhasil diberi Geotag & Timestamp!\n${watermarked.metadataText}'),
-          backgroundColor: const Color(0xFF059669),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
+      final res = await EvidenceHelpers.captureGeotaggedPhoto();
+      if (res != null && mounted) {
+        setState(() {
+          _pendingFiles.add(
+            PickedEvidenceFile(
+              fileName: res.fileName,
+              bytes: res.bytes,
+              mimeType: res.mimeType,
+              keterangan: res.metadataText,
+            ),
+          );
+        });
+      }
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil foto: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil foto kamera atau koordinat GPS.')),
+        );
       }
     } finally {
-      if (mounted) setState(() => _processingCamera = false);
+      if (mounted) setState(() => _capturingGps = false);
     }
   }
 
-  Future<void> _pickFile() async {
+  Future<void> _pickDocuments() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        withData: true,
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip'],
-      );
-      if (result == null) return;
-      setState(() {
-        for (final f in result.files) {
-          if (f.bytes != null) {
-            _pendingFiles.add(PendingFileItem(
-              name: f.name,
-              bytes: f.bytes!,
-              mimeType: _guessMimeType(f.name),
-            ));
-          }
-        }
-      });
-    } catch (e) {
+      final files = await EvidenceHelpers.pickEvidenceFiles();
+      if (files.isNotEmpty && mounted) {
+        setState(() => _pendingFiles.addAll(files));
+      }
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memilih file: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal memilih berkas.')),
+        );
       }
     }
   }
 
-  void _showAddLinkDialog() {
-    final judulCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
-    String platform = 'Google Drive';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tambah Link Bukti Dukung', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: judulCtrl,
-              decoration: const InputDecoration(labelText: 'Judul Dokumen / Link *', border: OutlineInputBorder(), isDense: true),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlCtrl,
-              decoration: const InputDecoration(
-                labelText: 'URL (https://...) *',
-                hintText: 'https://drive.google.com/...',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: platform,
-              decoration: const InputDecoration(labelText: 'Platform', border: OutlineInputBorder(), isDense: true),
-              items: ['Google Drive', 'OneDrive', 'SharePoint', 'Dropbox', 'Website Instansi', 'Lainnya']
-                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                  .toList(),
-              onChanged: (v) => platform = v ?? 'Google Drive',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              if (judulCtrl.text.trim().isEmpty || urlCtrl.text.trim().isEmpty) return;
-              setState(() {
-                _pendingLinks.add(PendingLinkItem(
-                  judul: judulCtrl.text.trim(),
-                  url: urlCtrl.text.trim(),
-                  platform: platform,
-                ));
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Tambah'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _addLink() async {
+    final link = await EvidenceHelpers.showAddLinkDialog(context);
+    if (link != null && mounted) {
+      setState(() => _pendingLinks.add(link));
+    }
   }
 
-  Future<void> _handleSubmit() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedPeriodId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih periode terlebih dahulu')));
+    if (_periodId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Periode kinerja belum tersedia.')),
+      );
       return;
     }
 
     setState(() => _submitting = true);
-
     try {
+      final t = double.tryParse(_targetCtrl.text.replaceAll(',', '.'));
+      final r = double.tryParse(_realisasiCtrl.text.replaceAll(',', '.'));
+
       final payload = <String, dynamic>{
-        'period_id': _selectedPeriodId,
-        'performance_plan_id': null,
-        'tanggal': _tanggal,
-        'nama_kegiatan': _namaController.text.trim(),
-        'deskripsi': _deskripsiController.text.trim(),
-        'target': double.tryParse(_targetController.text),
-        'satuan': _satuanController.text.trim(),
-        'realisasi': double.tryParse(_realisasiController.text),
-        'status_kegiatan': _statusKegiatan,
-        'catatan': _catatanController.text.trim(),
+        'period_id': _periodId,
+        'tanggal': _formattedDate,
+        'nama_kegiatan': _namaCtrl.text.trim(),
+        'deskripsi': _deskripsiCtrl.text.trim().isEmpty ? null : _deskripsiCtrl.text.trim(),
+        'target': t,
+        'satuan': _satuanCtrl.text.trim().isEmpty ? null : _satuanCtrl.text.trim(),
+        'realisasi': r,
+        'status_kegiatan': _status,
+        'catatan': _catatanCtrl.text.trim().isEmpty ? null : _catatanCtrl.text.trim(),
       };
 
       int activityId;
-      if (widget.editActivity != null) {
+      if (_isEditing) {
         activityId = widget.editActivity!['id'] as int;
         await ApiService.updateActivity(activityId, payload);
       } else {
@@ -290,438 +210,454 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
         activityId = created['id'] as int;
       }
 
-      // Upload bukti dukung (jika ada) beserta keterangan Geotag & Timestamp
-      for (final file in _pendingFiles) {
+      for (final f in _pendingFiles) {
         await ApiService.uploadEvidenceFile(
           activityId: activityId,
-          fileName: file.name,
-          bytes: file.bytes,
-          mimeType: file.mimeType,
-          keterangan: file.keterangan,
+          fileName: f.fileName,
+          bytes: f.bytes,
+          mimeType: f.mimeType,
+          keterangan: f.keterangan,
         );
       }
-
-      for (final link in _pendingLinks) {
+      for (final l in _pendingLinks) {
         await ApiService.addEvidenceLink(
           activityId: activityId,
-          judul: link.judul,
-          url: link.url,
-          platform: link.platform,
+          judul: l.judul,
+          url: l.url,
+          platform: l.platform,
         );
       }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.editActivity != null ? 'Kegiatan berhasil diperbarui!' : 'Kegiatan CKP harian berhasil disimpan!'),
-          backgroundColor: const Color(0xFF059669),
+          content: Text(_isEditing ? 'Kegiatan berhasil diperbarui.' : 'Kegiatan harian berhasil dicatat.'),
         ),
       );
 
-      // Reset form jika input baru
-      if (widget.editActivity == null) {
-        _namaController.clear();
-        _deskripsiController.clear();
-        _targetController.clear();
-        _realisasiController.clear();
-        _catatanController.clear();
+      if (!_isEditing) {
+        _namaCtrl.clear();
+        _deskripsiCtrl.clear();
+        _targetCtrl.clear();
+        _satuanCtrl.clear();
+        _realisasiCtrl.clear();
+        _catatanCtrl.clear();
         setState(() {
           _pendingFiles.clear();
           _pendingLinks.clear();
+          _status = 'selesai';
         });
       }
 
       widget.onSuccess?.call();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: $e'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan kegiatan: $e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loadingInit) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildBody(BuildContext context) {
+    final p = AppTheme.of(context);
+    final pct = _computedPercentage;
 
-    final isEdit = widget.editActivity != null;
+    if (_loadingMeta) {
+      return Center(child: CircularProgressIndicator(color: p.primary));
+    }
 
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          // Header Card
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0F2FE),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.camera_enhance_rounded, color: Color(0xFF0284C7), size: 24),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    isEdit
-                        ? 'Perbarui data kegiatan harian Anda.'
-                        : 'Isi kegiatan harian & ambil foto bukti ber-koordinat GPS + Timestamp otomatis.',
-                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF0369A1), fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Periode & Tanggal
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: _selectedPeriodId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Periode *',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
-                  items: _periods.map((p) {
-                    return DropdownMenuItem<int>(
-                      value: p['id'] as int,
-                      child: Text(p['nama'].toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5)),
-                    );
-                  }).toList(),
-                  onChanged: (v) => setState(() => _selectedPeriodId = v),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: () async {
-                    final initial = DateTime.tryParse(_tanggal) ?? DateTime.now();
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: initial,
-                      firstDate: DateTime(2024),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setState(() => _tanggal = picked.toIso8601String().split('T')[0]);
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Tanggal *',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      suffixIcon: const Icon(Icons.calendar_today, size: 18),
-                    ),
-                    child: Text(_tanggal, style: const TextStyle(fontSize: 13.5)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Nama Kegiatan
-          TextFormField(
-            controller: _namaController,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama kegiatan wajib diisi' : null,
-            decoration: InputDecoration(
-              labelText: 'Nama Kegiatan Harian *',
-              hintText: 'Cth: Pemeriksaan data hasil survei lapangan',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Deskripsi
-          TextFormField(
-            controller: _deskripsiController,
-            maxLines: 2,
-            decoration: InputDecoration(
-              labelText: 'Deskripsi Singkat (Opsional)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Target, Realisasi, Satuan, Capaian
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _targetController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Target',
-                    hintText: '10',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  controller: _realisasiController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Realisasi',
-                    hintText: '10',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  controller: _satuanController,
-                  decoration: InputDecoration(
-                    labelText: 'Satuan',
-                    hintText: 'Dokumen',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Real-time Capaian Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Persentase Capaian Otomatis:', style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B))),
-                Text(
-                  '$_calculatedCapaian%',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _calculatedCapaian >= 100 ? const Color(0xFF059669) : const Color(0xFF0284C7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Status Kegiatan Quick Chips
-          const Text('Status Kegiatan:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              {'val': 'selesai', 'label': '✓ Selesai'},
-              {'val': 'dalam_proses', 'label': '⏳ Dalam Proses'},
-              {'val': 'ditunda', 'label': '⏸ Ditunda'},
-            ].map((s) {
-              final selected = _statusKegiatan == s['val'];
-              return ChoiceChip(
-                label: Text(s['label']!),
-                selected: selected,
-                onSelected: (_) => setState(() => _statusKegiatan = s['val']!),
-                selectedColor: const Color(0xFFE0F2FE),
-                labelStyle: TextStyle(
-                  color: selected ? const Color(0xFF0369A1) : const Color(0xFF64748B),
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 14),
-
-          // Catatan
-          TextFormField(
-            controller: _catatanController,
-            decoration: InputDecoration(
-              labelText: 'Catatan Tambahan (Opsional)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // Bukti Dukung Section
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
+          // Section 1: Periode & Tanggal
+          HairlineCard(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '📎 Lampirkan Bukti Dukung (Opsional)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Foto dari Kamera akan otomatis merekam Titik Koordinat GPS & Timestamp langsung pada gambar.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w500),
+                Text(
+                  'Periode & Waktu',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.textPrimary),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                DropdownButtonFormField<int>(
+                  key: ValueKey(_periodId),
+                  initialValue: _periodId,
+                  decoration: const InputDecoration(labelText: 'Periode'),
+                  dropdownColor: p.surface,
+                  items: _periods.map((item) {
+                    final map = item as Map<String, dynamic>;
+                    final label = (map['nama'] ?? 'Periode').toString();
+                    final active = map['is_active'] == 1 || map['status'] == 'aktif';
+                    return DropdownMenuItem<int>(
+                      value: map['id'] as int,
+                      child: Text('$label${active ? ' • Aktif' : ''}'),
+                    );
+                  }).toList(),
+                  onChanged: _isEditing ? null : (v) => setState(() => _periodId = v),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _isEditing ? null : _pickDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Tanggal Kegiatan',
+                      suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+                    ),
+                    child: Text(
+                      _formattedDate,
+                      style: AppTheme.mono(size: 13.5, color: p.textPrimary),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Section 2: Detail Kegiatan & Capaian
+          HairlineCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Detail Aktivitas',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.textPrimary),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _namaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Kegiatan *',
+                    hintText: 'Contoh: Rekapitulasi data statistik bulanan',
+                  ),
+                  maxLines: 2,
+                  minLines: 1,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama kegiatan wajib diisi' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _deskripsiCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Uraian Singkat (Opsional)',
+                    hintText: 'Jelaskan output atau detail pelaksanaan...',
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                ),
+                const SizedBox(height: 14),
+                Row(
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _processingCamera ? null : _pickCameraPhoto,
-                      icon: _processingCamera
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.camera_alt_rounded, size: 18),
-                      label: Text(
-                        _processingCamera ? 'Merekam GPS...' : 'Kamera (GPS + Timestamp)',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
+                    Expanded(
+                      child: TextFormField(
+                        controller: _targetCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: AppTheme.mono(size: 13.5, color: p.textPrimary),
+                        decoration: const InputDecoration(labelText: 'Target', hintText: '10'),
                       ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: _pickFile,
-                      icon: const Icon(Icons.upload_file_outlined, size: 18),
-                      label: const Text('Pilih File', style: TextStyle(fontSize: 12.5)),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _showAddLinkDialog,
-                      icon: const Icon(Icons.add_link, size: 18),
-                      label: const Text('Tambah Link', style: TextStyle(fontSize: 12.5)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _realisasiCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: AppTheme.mono(size: 13.5, color: p.textPrimary),
+                        decoration: const InputDecoration(labelText: 'Realisasi', hintText: '10'),
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _satuanCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Satuan Output',
+                    hintText: 'Dokumen, Laporan, Tabel, Kunjungan',
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Progress preview bar
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: p.surfaceMuted,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: p.border),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Capaian Terhitung',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                          ),
+                          const Spacer(),
+                          MonoPill(
+                            text: '$pct%',
+                            color: pct >= 80 ? p.success : p.primary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pct / 100.0,
+                          minHeight: 6,
+                          backgroundColor: p.border,
+                          color: pct >= 80 ? p.success : p.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                Text(
+                  'Status Pelaksanaan',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Selesai'),
+                      selected: _status == 'selesai',
+                      onSelected: (_) => setState(() => _status = 'selesai'),
+                      selectedColor: p.successBg,
+                      labelStyle: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: _status == 'selesai' ? p.success : p.textSecondary,
+                      ),
+                      side: BorderSide(color: _status == 'selesai' ? p.success : p.border),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Dalam Proses'),
+                      selected: _status == 'proses',
+                      onSelected: (_) => setState(() => _status = 'proses'),
+                      selectedColor: p.warningBg,
+                      labelStyle: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: _status == 'proses' ? p.warning : p.textSecondary,
+                      ),
+                      side: BorderSide(color: _status == 'proses' ? p.warning : p.border),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _catatanCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Catatan (Opsional)',
+                    hintText: 'Kendala atau keterangan tambahan',
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Section 3: Bukti Dukung (Kamera Geotag, File, Link)
+          HairlineCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lampiran Bukti Dukung',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.textPrimary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Foto kamera otomatis merekam koordinat GPS & timestamp watermark.',
+                  style: TextStyle(fontSize: 12, color: p.textMuted),
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _capturingGps ? null : _captureCameraGps,
+                        icon: _capturingGps
+                            ? SizedBox(
+                                width: 15,
+                                height: 15,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: p.primary),
+                              )
+                            : Icon(Icons.camera_alt_outlined, size: 17, color: p.primary),
+                        label: Text(_capturingGps ? 'Lokasi...' : 'Kamera GPS'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickDocuments,
+                        icon: Icon(Icons.upload_file_outlined, size: 17, color: p.textSecondary),
+                        label: const Text('Pilih File'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _addLink,
+                    icon: Icon(Icons.link_rounded, size: 17, color: p.info),
+                    label: const Text('Tambah Tautan URL'),
+                  ),
                 ),
 
                 if (_pendingFiles.isNotEmpty || _pendingLinks.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                ],
-
-                ..._pendingFiles.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final f = entry.value;
-                  final isImage = f.mimeType.startsWith('image/');
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        if (isImage)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(
-                              f.bytes,
-                              width: 52,
-                              height: 52,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        else
-                          const Icon(Icons.insert_drive_file_outlined, color: Color(0xFF0284C7), size: 32),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                              Text('${(f.bytes.length / 1024).toStringAsFixed(1)} KB', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                              if (f.keterangan != null) ...[
-                                const SizedBox(height: 3),
+                  Divider(height: 1, color: p.border),
+                  const SizedBox(height: 10),
+                  ..._pendingFiles.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final f = entry.value;
+                    final hasGps = f.keterangan != null && f.keterangan!.isNotEmpty;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: p.surfaceMuted,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: p.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            hasGps ? Icons.location_on_outlined : Icons.insert_drive_file_outlined,
+                            size: 18,
+                            color: hasGps ? p.info : p.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  f.keterangan!,
-                                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                                  f.fileName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textPrimary),
+                                ),
+                                if (hasGps)
+                                  Text(
+                                    f.keterangan!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTheme.mono(size: 10.5, color: p.info),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, size: 17, color: p.textMuted),
+                            onPressed: () => setState(() => _pendingFiles.removeAt(idx)),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  ..._pendingLinks.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final l = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: p.surfaceMuted,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: p.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.link_rounded, size: 18, color: p.info),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l.judul,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textPrimary),
+                                ),
+                                Text(
+                                  l.url,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTheme.mono(size: 10.5, color: p.textMuted),
                                 ),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                          onPressed: () => setState(() => _pendingFiles.removeAt(idx)),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-
-                ..._pendingLinks.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final l = entry.value;
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.link, color: Color(0xFF7C3AED)),
-                    title: Text(l.judul, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5)),
-                    subtitle: Text(l.url, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                      onPressed: () => setState(() => _pendingLinks.removeAt(idx)),
-                    ),
-                  );
-                }),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, size: 17, color: p.textMuted),
+                            onPressed: () => setState(() => _pendingLinks.removeAt(idx)),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
 
-          SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _submitting ? null : _handleSubmit,
-              icon: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle_outline),
-              label: Text(
-                _submitting
-                    ? 'Menyimpan...'
-                    : (isEdit ? 'Simpan Perubahan' : 'Simpan Kegiatan CKP'),
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0284C7),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+          ElevatedButton(
+            onPressed: _submitting ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: p.primary,
+              foregroundColor: p.onPrimary,
+              minimumSize: const Size.fromHeight(48),
             ),
+            child: _submitting
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.2, color: p.onPrimary),
+                  )
+                : Text(_isEditing ? 'Simpan Perubahan' : 'Simpan Kegiatan Harian'),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isEditing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit Kegiatan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ),
+        body: _buildBody(context),
+      );
+    }
+    return _buildBody(context);
   }
 }

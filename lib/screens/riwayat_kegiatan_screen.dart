@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
-import '../utils/photo_watermark.dart';
+import '../theme/app_theme.dart';
+import '../utils/evidence_helpers.dart';
+import '../widgets/ui_components.dart';
 import 'input_kegiatan_screen.dart';
 
 class RiwayatKegiatanScreen extends StatefulWidget {
@@ -15,312 +15,333 @@ class RiwayatKegiatanScreen extends StatefulWidget {
 
 class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
   List<dynamic> _periods = [];
-  List<dynamic> _activities = [];
   int? _selectedPeriodId;
+  List<dynamic> _activities = [];
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    _initLoad();
   }
 
-  Future<void> _init() async {
-    setState(() => _loading = true);
+  Future<void> _initLoad() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final periods = await ApiService.getPeriods();
-      _periods = periods;
+      int? periodId;
       if (periods.isNotEmpty) {
-        Map<String, dynamic>? active;
-        for (final item in periods) {
-          if (item is Map<String, dynamic> && (item['is_active'] == 1 || item['status'] == 'aktif')) {
-            active = item;
-            break;
-          }
-        }
-        active ??= periods.first as Map<String, dynamic>;
-        _selectedPeriodId = (active['id'] as num?)?.toInt();
+        final active = periods.cast<Map<String, dynamic>>().firstWhere(
+              (p) => p['is_active'] == 1 || p['status'] == 'aktif',
+              orElse: () => Map<String, dynamic>.from(periods.first as Map),
+            );
+        periodId = active['id'] as int?;
       }
-      await _fetchActivities();
+      if (!mounted) return;
+      setState(() {
+        _periods = periods;
+        _selectedPeriodId = periodId;
+      });
+      await _loadActivities();
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _error = 'Gagal memuat riwayat kegiatan.';
+          _loading = false;
+        });
+      }
     }
   }
 
-  Future<void> _fetchActivities() async {
-    setState(() => _loading = true);
+  Future<void> _loadActivities() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final list = await ApiService.getActivities(periodId: _selectedPeriodId);
       if (mounted) setState(() => _activities = list);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat: $e')));
-      }
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Gagal mengambil daftar kegiatan.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _deleteActivity(int id) async {
-    final confirm = await showDialog<bool>(
+  Future<void> _deleteActivity(Map<String, dynamic> act) async {
+    final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Kegiatan?'),
-        content: const Text('Kegiatan dan bukti dukung terkait akan dihapus.'),
+        title: const Text('Hapus Kegiatan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Text('Hapus "${act['nama_kegiatan']}"? Seluruh bukti dukung terkait juga akan terhapus.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.of(ctx).danger),
             child: const Text('Hapus'),
           ),
         ],
       ),
     );
-    if (confirm != true) return;
+    if (yes != true) return;
 
     try {
-      await ApiService.deleteActivity(id);
-      await _fetchActivities();
+      await ApiService.deleteActivity(act['id'] as int);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kegiatan dihapus')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kegiatan berhasil dihapus.')),
+        );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus: $e')));
-      }
+      await _loadActivities();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
-  void _openEditModal(Map<String, dynamic> act) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => Scaffold(
-          appBar: AppBar(title: const Text('Edit Kegiatan Harian')),
-          body: InputKegiatanScreen(
-            editActivity: act,
-            onSuccess: () {
-              Navigator.pop(ctx);
-              _fetchActivities();
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openEvidenceBottomSheet(Map<String, dynamic> act) {
-    showModalBottomSheet(
+  Future<void> _openEvidenceSheet(Map<String, dynamic> act) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => _EvidenceSheet(
+      useSafeArea: true,
+      builder: (_) => _EvidenceSheet(
         activity: act,
-        onChanged: _fetchActivities,
+        onChanged: _loadActivities,
       ),
     );
   }
 
-  void _downloadPeriodExcel() {
-    if (_selectedPeriodId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih periode terlebih dahulu')),
-      );
-      return;
+  Future<void> _downloadExcel() async {
+    if (_selectedPeriodId == null) return;
+    final uri = Uri.parse(ApiService.getExcelExportUrl(periodId: _selectedPeriodId!));
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka tautan Excel.')),
+        );
+      }
     }
-    final url = ApiService.getExcelExportUrl(periodId: _selectedPeriodId!);
-    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.of(context);
+
     return Column(
       children: [
-        // Filter & Download Bar
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: _selectedPeriodId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Periode',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    isDense: true,
-                  ),
-                  items: _periods.map((p) {
-                    return DropdownMenuItem<int>(
-                      value: p['id'] as int,
-                      child: Text(p['nama'].toString(), style: const TextStyle(fontSize: 13.5)),
-                    );
-                  }).toList(),
-                  onChanged: (v) {
-                    setState(() => _selectedPeriodId = v);
-                    _fetchActivities();
-                  },
-                ),
+        if (_periods.isNotEmpty)
+          PeriodSelectorBar(
+            periods: _periods,
+            selectedPeriodId: _selectedPeriodId,
+            onChanged: (v) {
+              setState(() => _selectedPeriodId = v);
+              _loadActivities();
+            },
+            trailing: OutlinedButton.icon(
+              onPressed: _selectedPeriodId == null ? null : _downloadExcel,
+              icon: Icon(Icons.download_rounded, size: 15, color: p.success),
+              label: Text('Excel', style: TextStyle(fontSize: 12, color: p.textPrimary)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _downloadPeriodExcel,
-                icon: const Icon(Icons.download_rounded, size: 17, color: Color(0xFF059669)),
-                label: const Text('Excel', style: TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF059669)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              IconButton(
-                onPressed: _fetchActivities,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-              ),
-            ],
+            ),
           ),
-        ),
-        const Divider(height: 1),
 
-        // List
         Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _activities.isEmpty
-                  ? const Center(
-                      child: Text('Belum ada kegiatan pada periode ini.', style: TextStyle(color: Colors.grey)),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _fetchActivities,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(14),
-                        itemCount: _activities.length,
-                        itemBuilder: (ctx, i) {
-                          final act = _activities[i] as Map<String, dynamic>;
-                          final statusKeg = act['status_kegiatan']?.toString() ?? 'selesai';
-                          final isSelesai = statusKeg == 'selesai';
-                          final jumlahBukti = (act['jumlah_bukti'] ?? 0) + (act['jumlah_link'] ?? 0);
-                          final capaian = act['persentase_capaian'] ?? 0;
-                          final buktiKet = act['bukti_keterangan']?.toString();
+          child: RefreshIndicator(
+            onRefresh: _loadActivities,
+            color: p.primary,
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: p.primary))
+                : _error != null
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          ExecutiveEmptyState(
+                            icon: Icons.cloud_off_rounded,
+                            title: 'Gagal Memuat Riwayat',
+                            subtitle: _error!,
+                            buttonLabel: 'Muat Ulang',
+                            onPressed: _loadActivities,
+                          ),
+                        ],
+                      )
+                    : _activities.isEmpty
+                        ? ListView(
+                            padding: const EdgeInsets.all(20),
+                            children: const [
+                              ExecutiveEmptyState(
+                                icon: Icons.inbox_outlined,
+                                title: 'Belum Ada Kegiatan',
+                                subtitle: 'Belum ada kegiatan harian tercatat pada periode yang dipilih.',
+                              ),
+                            ],
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                            itemCount: _activities.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (_, idx) {
+                              final act = _activities[idx] as Map<String, dynamic>;
+                              final pct = (act['persentase_capaian'] as num?)?.toInt() ?? 0;
+                              final isDone = act['status_kegiatan'] == 'selesai';
+                              final fileCount = (act['jumlah_bukti'] as num?)?.toInt() ?? 0;
+                              final linkCount = (act['jumlah_link'] as num?)?.toInt() ?? 0;
+                              final totalBukti = fileCount + linkCount;
+                              final gpsMeta = (act['bukti_keterangan'] ?? '').toString();
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              return HairlineCard(
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        act['tanggal']?.toString() ?? '',
-                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: isSelesai ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        isSelesai ? '✓ Selesai' : statusKeg,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: isSelesai ? const Color(0xFF065F46) : const Color(0xFF92400E),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  act['nama_kegiatan']?.toString() ?? '',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF1E293B)),
-                                ),
-                                if (act['deskripsi'] != null && act['deskripsi'].toString().isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    act['deskripsi'].toString(),
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                                if (buktiKet != null && buktiKet.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFECFDF5),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFFA7F3D0)),
-                                    ),
-                                    child: Text(
-                                      buktiKet,
-                                      style: const TextStyle(fontSize: 11, color: Color(0xFF065F46), fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Realisasi: ${act['realisasi'] ?? '-'} / ${act['target'] ?? '-'} ${act['satuan'] ?? ''}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                    ),
-                                    Text(
-                                      'Capaian: $capaian%',
-                                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 18),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () => _openEvidenceBottomSheet(act),
-                                      icon: const Icon(Icons.attach_file, size: 16),
-                                      label: Text('Bukti Dukung ($jumlahBukti)', style: const TextStyle(fontSize: 12.5)),
-                                    ),
                                     Row(
                                       children: [
+                                        MonoPill(text: (act['tanggal'] ?? '-').toString()),
+                                        const SizedBox(width: 8),
+                                        StatusDotBadge(
+                                          label: isDone ? 'Selesai' : 'Proses',
+                                          color: isDone ? p.success : p.warning,
+                                          bgColor: isDone ? p.successBg : p.warningBg,
+                                        ),
+                                        const Spacer(),
+                                        MonoPill(
+                                          text: '$pct%',
+                                          color: pct >= 80 ? p.success : p.primary,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      (act['nama_kegiatan'] ?? '-').toString(),
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: p.textPrimary,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                    if (act['deskripsi'] != null && act['deskripsi'].toString().trim().isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        act['deskripsi'].toString(),
+                                        style: TextStyle(fontSize: 12.5, color: p.textMuted, height: 1.4),
+                                      ),
+                                    ],
+                                    if (act['target'] != null && act['realisasi'] != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Realisasi: ${act['realisasi']} / ${act['target']} ${act['satuan'] ?? ''}',
+                                        style: AppTheme.mono(size: 11.5, color: p.textSecondary),
+                                      ),
+                                    ],
+                                    if (gpsMeta.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: p.infoBg,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: p.info.withValues(alpha: 0.25)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.location_on_outlined, size: 14, color: p.info),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                gpsMeta,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTheme.mono(size: 10.5, color: p.info),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 12),
+                                    Divider(height: 1, color: p.border),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        InkWell(
+                                          onTap: () => _openEvidenceSheet(act),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: p.surfaceMuted,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: p.border),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.attach_file_rounded, size: 15, color: p.primary),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  '$totalBukti Bukti',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: p.textPrimary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
                                         IconButton(
-                                          onPressed: () => _openEditModal(act),
-                                          icon: const Icon(Icons.edit_outlined, size: 19, color: Color(0xFF475569)),
                                           tooltip: 'Edit',
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => InputKegiatanScreen(
+                                                  editActivity: act,
+                                                  onSuccess: () {
+                                                    Navigator.of(context).pop();
+                                                    _loadActivities();
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: Icon(Icons.edit_outlined, size: 19, color: p.textSecondary),
+                                          visualDensity: VisualDensity.compact,
                                         ),
                                         IconButton(
-                                          onPressed: () => _deleteActivity(act['id'] as int),
-                                          icon: const Icon(Icons.delete_outline, size: 19, color: Colors.red),
                                           tooltip: 'Hapus',
+                                          onPressed: () => _deleteActivity(act),
+                                          icon: Icon(Icons.delete_outline_rounded, size: 19, color: p.danger),
+                                          visualDensity: VisualDensity.compact,
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                              );
+                            },
+                          ),
+          ),
         ),
       ],
     );
@@ -343,184 +364,317 @@ class _EvidenceSheetState extends State<_EvidenceSheet> {
   bool _loading = true;
   bool _uploading = false;
 
+  int get _activityId => widget.activity['id'] as int;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadEvidence();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadEvidence() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiService.getEvidence(widget.activity['id'] as int);
+      final data = await ApiService.getEvidence(_activityId);
       if (mounted) {
         setState(() {
-          _files = (res['files'] as List?) ?? [];
-          _links = (res['links'] as List?) ?? [];
+          _files = (data['files'] as List<dynamic>?) ?? [];
+          _links = (data['links'] as List<dynamic>?) ?? [];
         });
       }
-    } catch (_) {} finally {
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal memuat daftar bukti dukung.')),
+        );
+      }
+    } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _uploadCameraWithGeotag() async {
+  Future<void> _uploadCameraGps() async {
+    setState(() => _uploading = true);
     try {
-      final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-      if (photo == null) return;
-
-      setState(() => _uploading = true);
-      final rawBytes = await photo.readAsBytes();
-      final watermarked = await PhotoWatermark.stampCameraPhoto(rawBytes);
-
-      await ApiService.uploadEvidenceFile(
-        activityId: widget.activity['id'] as int,
-        fileName: watermarked.fileName,
-        bytes: watermarked.bytes,
-        mimeType: watermarked.mimeType,
-        keterangan: watermarked.metadataText,
-      );
-      await _load();
-      widget.onChanged();
+      final res = await EvidenceHelpers.captureGeotaggedPhoto();
+      if (res != null) {
+        await ApiService.uploadEvidenceFile(
+          activityId: _activityId,
+          fileName: res.fileName,
+          bytes: res.bytes,
+          mimeType: res.mimeType,
+          keterangan: res.metadataText,
+        );
+        widget.onChanged();
+        await _loadEvidence();
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal upload foto: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal unggah foto GPS: $e')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
   }
 
-  Future<void> _uploadNewFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      withData: true,
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip'],
-    );
-    if (result == null || result.files.isEmpty || result.files.first.bytes == null) return;
-    final f = result.files.first;
-    final ext = f.name.split('.').last.toLowerCase();
-    final mime = ext == 'pdf'
-        ? 'application/pdf'
-        : (ext == 'png' ? 'image/png' : (ext == 'jpg' || ext == 'jpeg' ? 'image/jpeg' : 'application/octet-stream'));
-
+  Future<void> _uploadFiles() async {
     setState(() => _uploading = true);
     try {
-      await ApiService.uploadEvidenceFile(
-        activityId: widget.activity['id'] as int,
-        fileName: f.name,
-        bytes: f.bytes!,
-        mimeType: mime,
-      );
-      await _load();
-      widget.onChanged();
+      final picked = await EvidenceHelpers.pickEvidenceFiles();
+      for (final f in picked) {
+        await ApiService.uploadEvidenceFile(
+          activityId: _activityId,
+          fileName: f.fileName,
+          bytes: f.bytes,
+          mimeType: f.mimeType,
+          keterangan: f.keterangan,
+        );
+      }
+      if (picked.isNotEmpty) {
+        widget.onChanged();
+        await _loadEvidence();
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal upload: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal unggah berkas: $e')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  Future<void> _addLink() async {
+    final link = await EvidenceHelpers.showAddLinkDialog(context);
+    if (link == null) return;
+    setState(() => _uploading = true);
+    try {
+      await ApiService.addEvidenceLink(
+        activityId: _activityId,
+        judul: link.judul,
+        url: link.url,
+        platform: link.platform,
+      );
+      widget.onChanged();
+      await _loadEvidence();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menambah tautan: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    if (url.isEmpty) return;
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 18,
-        right: 18,
-        top: 18,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Bukti Dukung: ${widget.activity['nama_kegiatan']}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ElevatedButton.icon(
-                onPressed: _uploading ? null : _uploadCameraWithGeotag,
-                icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                label: Text(_uploading ? 'Memproses...' : 'Kamera (GPS + Timestamp)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF059669),
-                  foregroundColor: Colors.white,
-                ),
+    final p = AppTheme.of(context);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollCtrl) {
+        return Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(color: p.borderStrong, borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 12, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bukti Dukung',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.textPrimary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          (widget.activity['nama_kegiatan'] ?? '').toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: p.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                ],
               ),
-              OutlinedButton.icon(
-                onPressed: _uploading ? null : _uploadNewFile,
-                icon: const Icon(Icons.upload_file, size: 18),
-                label: const Text('Pilih File'),
+            ),
+            Divider(height: 1, color: p.border),
+
+            // Upload toolbar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _uploading ? null : _uploadCameraGps,
+                      icon: Icon(Icons.camera_alt_outlined, size: 16, color: p.primary),
+                      label: const Text('Kamera GPS', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _uploading ? null : _uploadFiles,
+                      icon: Icon(Icons.upload_file_outlined, size: 16, color: p.textSecondary),
+                      label: const Text('File', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _uploading ? null : _addLink,
+                      icon: Icon(Icons.link_rounded, size: 16, color: p.info),
+                      label: const Text('Tautan', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_loading)
-            const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
-          else if (_files.isEmpty && _links.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: Text('Belum ada bukti dukung.', style: TextStyle(color: Colors.grey))),
-            )
-          else ...[
-            ..._files.map((f) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.insert_drive_file, color: Color(0xFF0284C7)),
-                  title: Text(f['nama_file']?.toString() ?? ''),
-                  subtitle: f['keterangan'] != null && f['keterangan'].toString().isNotEmpty
-                      ? Text(
-                          f['keterangan'].toString(),
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+            ),
+            if (_uploading) LinearProgressIndicator(minHeight: 2, color: p.primary),
+
+            Expanded(
+              child: _loading
+                  ? Center(child: CircularProgressIndicator(color: p.primary))
+                  : (_files.isEmpty && _links.isEmpty)
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: ExecutiveEmptyState(
+                            icon: Icons.folder_open_outlined,
+                            title: 'Belum Ada Bukti Dukung',
+                            subtitle: 'Ambil foto kamera GPS, unggah dokumen, atau lampirkan tautan di atas.',
+                          ),
                         )
-                      : null,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.open_in_new, size: 18),
-                        onPressed: () {
-                          final url = f['path_file']?.toString();
-                          if (url != null) launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                        onPressed: () async {
-                          await ApiService.deleteEvidenceFile(f['id'] as int);
-                          await _load();
-                          widget.onChanged();
-                        },
-                      ),
-                    ],
-                  ),
-                )),
-            ..._links.map((l) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.link, color: Color(0xFF7C3AED)),
-                  title: Text(l['judul']?.toString() ?? ''),
-                  subtitle: Text(l['url']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                    onPressed: () async {
-                      await ApiService.deleteEvidenceLink(l['id'] as int);
-                      await _load();
-                      widget.onChanged();
-                    },
-                  ),
-                )),
+                      : ListView(
+                          controller: scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          children: [
+                            ..._files.map((item) {
+                              final f = item as Map<String, dynamic>;
+                              final url = (f['path_file'] ?? f['url'] ?? '').toString();
+                              final ket = (f['keterangan'] ?? '').toString();
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: HairlineCard(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  onTap: () => _openExternalUrl(url),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        f['jenis'] == 'foto' ? Icons.image_outlined : Icons.description_outlined,
+                                        size: 20,
+                                        color: p.primary,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (f['nama_file'] ?? 'Berkas').toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: p.textPrimary,
+                                              ),
+                                            ),
+                                            if (ket.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                ket,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTheme.mono(size: 10.5, color: p.info),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: p.danger),
+                                        onPressed: () async {
+                                          await ApiService.deleteEvidenceFile(f['id'] as int);
+                                          widget.onChanged();
+                                          await _loadEvidence();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            ..._links.map((item) {
+                              final l = item as Map<String, dynamic>;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: HairlineCard(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  onTap: () => _openExternalUrl((l['url'] ?? '').toString()),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.link_rounded, size: 20, color: p.info),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (l['judul'] ?? 'Tautan').toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: p.textPrimary,
+                                              ),
+                                            ),
+                                            Text(
+                                              (l['url'] ?? '').toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: AppTheme.mono(size: 10.5, color: p.textMuted),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: p.danger),
+                                        onPressed: () async {
+                                          await ApiService.deleteEvidenceLink(l['id'] as int);
+                                          widget.onChanged();
+                                          await _loadEvidence();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+            ),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }

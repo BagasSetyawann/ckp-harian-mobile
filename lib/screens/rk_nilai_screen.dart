@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/ui_components.dart';
 
 class RkNilaiScreen extends StatefulWidget {
   const RkNilaiScreen({super.key});
@@ -11,231 +13,400 @@ class RkNilaiScreen extends StatefulWidget {
 
 class _RkNilaiScreenState extends State<RkNilaiScreen> {
   List<dynamic> _periods = [];
-  Map<String, dynamic>? _ckpData;
   int? _selectedPeriodId;
+  Map<String, dynamic>? _scoreData;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    _initLoad();
   }
 
-  Future<void> _init() async {
-    setState(() => _loading = true);
+  Future<void> _initLoad() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final periods = await ApiService.getPeriods();
-      _periods = periods;
+      int? periodId;
       if (periods.isNotEmpty) {
-        Map<String, dynamic>? active;
-        for (final item in periods) {
-          if (item is Map<String, dynamic> && (item['is_active'] == 1 || item['status'] == 'aktif')) {
-            active = item;
-            break;
-          }
-        }
-        active ??= periods.first as Map<String, dynamic>;
-        _selectedPeriodId = (active['id'] as num?)?.toInt();
+        final active = periods.cast<Map<String, dynamic>>().firstWhere(
+              (p) => p['is_active'] == 1 || p['status'] == 'aktif',
+              orElse: () => Map<String, dynamic>.from(periods.first as Map),
+            );
+        periodId = active['id'] as int?;
       }
-      await _loadData();
+      if (!mounted) return;
+      setState(() {
+        _periods = periods;
+        _selectedPeriodId = periodId;
+      });
+      await _loadScore();
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _loading = false;
+        });
+      }
     } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Gagal memuat periode penilaian.';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadScore() async {
+    if (_selectedPeriodId == null) {
+      setState(() => _loading = false);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await ApiService.getCkpScore(periodId: _selectedPeriodId!);
+      if (mounted) setState(() => _scoreData = data);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Gagal memuat nilai CKP.');
+    } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _downloadExcel() async {
     if (_selectedPeriodId == null) return;
-    setState(() => _loading = true);
+    final uri = Uri.parse(ApiService.getExcelExportUrl(periodId: _selectedPeriodId!));
     try {
-      final res = await ApiService.getCkpScore(periodId: _selectedPeriodId!);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
       if (mounted) {
-        setState(() {
-          _ckpData = res;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka tautan unduhan Excel.')),
+        );
       }
-    } catch (_) {} finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final nilaiCkp = (_ckpData?['nilai_ckp'] ?? 0).toDouble();
-    final nilaiPk = _ckpData?['nilai_pk'] ?? 0;
-    final nilaiPerilaku = _ckpData?['nilai_perilaku'] ?? 0;
-    final status = _ckpData?['status'] ?? 'draft';
-    final catatan = _ckpData?['catatan']?.toString() ?? '';
+    final p = AppTheme.of(context);
+
+    final nilaiCkp = (_scoreData?['nilai_ckp'] as num?)?.toDouble() ?? 0.0;
+    final nilaiPk = (_scoreData?['nilai_pk'] as num?)?.toDouble() ?? 0.0;
+    final nilaiPerilaku = (_scoreData?['nilai_perilaku'] as num?)?.toDouble() ?? 0.0;
+    final status = (_scoreData?['status'] ?? 'draft').toString();
+    final catatan = (_scoreData?['catatan'] ?? '').toString().trim();
+    final components = (_scoreData?['components'] as List<dynamic>?) ?? [];
 
     return Column(
       children: [
-        // Period Selector
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: DropdownButtonFormField<int>(
-            value: _selectedPeriodId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'Periode Penilaian & Laporan',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              isDense: true,
-            ),
-            items: _periods.map((p) {
-              return DropdownMenuItem<int>(
-                value: p['id'] as int,
-                child: Text(p['nama'].toString(), style: const TextStyle(fontSize: 13.5)),
-              );
-            }).toList(),
+        if (_periods.isNotEmpty)
+          PeriodSelectorBar(
+            periods: _periods,
+            selectedPeriodId: _selectedPeriodId,
             onChanged: (v) {
               setState(() => _selectedPeriodId = v);
-              _loadData();
+              _loadScore();
             },
           ),
-        ),
-        const Divider(height: 1),
 
         Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      // Score Card
-                      Container(
+          child: RefreshIndicator(
+            onRefresh: _loadScore,
+            color: p.primary,
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: p.primary))
+                : _error != null
+                    ? ListView(
                         padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0284C7), Color(0xFF075985)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                        children: [
+                          ExecutiveEmptyState(
+                            icon: Icons.cloud_off_rounded,
+                            title: 'Data Tidak Tersedia',
+                            subtitle: _error!,
+                            buttonLabel: 'Muat Ulang',
+                            onPressed: _loadScore,
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        ],
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                        children: [
+                          // Executive Score Showcase Card
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [p.heroStart, p.heroEnd],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: p.heroBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Nilai CKP Bulanan',
-                                  style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 13),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'NILAI AKHIR CKP',
+                                      style: AppTheme.mono(
+                                        size: 11,
+                                        weight: FontWeight.w600,
+                                        color: const Color(0xFF94A3B8),
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        status.toUpperCase(),
+                                        style: AppTheme.mono(
+                                          size: 10.5,
+                                          weight: FontWeight.w600,
+                                          color: status == 'final'
+                                              ? const Color(0xFF34D399)
+                                              : const Color(0xFF38BDF8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      nilaiCkp.toStringAsFixed(1),
+                                      style: AppTheme.mono(
+                                        size: 42,
+                                        weight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '/ 100',
+                                      style: AppTheme.mono(
+                                        size: 14,
+                                        weight: FontWeight.w500,
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(20),
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                                   ),
-                                  child: Text(
-                                    status == 'final' ? '✓ Final' : '⏳ Draft',
-                                    style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Capaian Kinerja',
+                                              style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              nilaiPk.toStringAsFixed(1),
+                                              style: AppTheme.mono(
+                                                size: 16,
+                                                weight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(width: 1, height: 30, color: Colors.white.withValues(alpha: 0.14)),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Perilaku Kerja',
+                                              style: TextStyle(fontSize: 11.5, color: Color(0xFFCBD5E1)),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              nilaiPerilaku.toStringAsFixed(1),
+                                              style: AppTheme.mono(
+                                                size: 16,
+                                                weight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '$nilaiCkp',
-                              style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900),
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(color: Colors.white24),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Nilai Capaian (PK)', style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 11.5)),
-                                      Text('$nilaiPk', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Nilai Perilaku', style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 11.5)),
-                                      Text('$nilaiPerilaku', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (catatan.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                'Catatan KPA: $catatan',
-                                style: const TextStyle(color: Color(0xFFE0F2FE), fontSize: 12),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                          ),
 
-                      const SizedBox(height: 20),
+                          const SizedBox(height: 14),
 
-                      // Download Hasil Kerja per Periode Card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
+                          // Components breakdown
+                          HairlineCard(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.download_for_offline_rounded, color: Color(0xFF059669), size: 24),
-                                SizedBox(width: 8),
                                 Text(
-                                  'Unduh Hasil Kerja Periode Ini',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                                  'Komponen Pembentuk Nilai',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.textPrimary),
                                 ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Perhitungan otomatis mengacu rata-rata capaian kegiatan harian & perilaku.',
+                                  style: TextStyle(fontSize: 12, color: p.textMuted),
+                                ),
+                                const SizedBox(height: 14),
+                                if (components.isEmpty)
+                                  Text(
+                                    'Bobot komponen CKP periode ini belum dikonfigurasi.',
+                                    style: TextStyle(fontSize: 12.5, color: p.textMuted),
+                                  )
+                                else
+                                  ...components.asMap().entries.map((entry) {
+                                    final c = entry.value as Map<String, dynamic>;
+                                    final isLast = entry.key == components.length - 1;
+                                    final kode = (c['kode'] ?? '').toString();
+                                    final bobot = (c['bobot'] as num?)?.toInt() ?? 0;
+                                    final nilai = (c['nilai'] as num?)?.toDouble() ?? 0.0;
+                                    final weighted = (c['nilai_tertimbang'] as num?)?.toDouble() ?? 0.0;
+
+                                    return Padding(
+                                      padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  kode == 'PK'
+                                                      ? 'Capaian Kegiatan Harian (PK)'
+                                                      : kode == 'PERILAKU'
+                                                          ? 'Perilaku Kerja (BerAKHLAK)'
+                                                          : kode,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: p.textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                              MonoPill(text: 'Bobot $bobot%'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Skor ${nilai.toStringAsFixed(1)}',
+                                                style: AppTheme.mono(size: 11.5, color: p.textMuted),
+                                              ),
+                                              const Spacer(),
+                                              Text(
+                                                '+${weighted.toStringAsFixed(1)} poin',
+                                                style: AppTheme.mono(
+                                                  size: 12,
+                                                  weight: FontWeight.w600,
+                                                  color: p.primary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: (nilai / 100.0).clamp(0.0, 1.0),
+                                              minHeight: 6,
+                                              backgroundColor: p.surfaceMuted,
+                                              color: kode == 'PK' ? p.primary : p.success,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Unduh laporan lengkap hasil kerja harian Anda beserta informasi bukti dukung dan nilai CKP dalam format Excel (.xlsx).',
-                              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 46,
-                              child: ElevatedButton.icon(
-                                onPressed: _selectedPeriodId == null
-                                    ? null
-                                    : () {
-                                        final url = ApiService.getExcelExportUrl(periodId: _selectedPeriodId!);
-                                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                                      },
-                                icon: const Icon(Icons.table_view_rounded),
-                                label: const Text(
-                                  'Download Hasil Kerja (.xlsx)',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF059669),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
-                                ),
+                          ),
+
+                          if (catatan.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            HairlineCard(
+                              padding: const EdgeInsets.all(14),
+                              color: p.infoBg,
+                              borderColor: p.info.withValues(alpha: 0.3),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.notes_rounded, size: 18, color: p.info),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Catatan Penilai',
+                                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: p.info),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          catatan,
+                                          style: TextStyle(fontSize: 12.5, color: p.textSecondary, height: 1.4),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
+
+                          if (_selectedPeriodId != null) ...[
+                            const SizedBox(height: 14),
+                            OutlinedButton.icon(
+                              onPressed: _downloadExcel,
+                              icon: Icon(Icons.table_view_outlined, size: 18, color: p.success),
+                              label: const Text('Unduh Rekap Excel (.xlsx) Periode Ini'),
+                              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+          ),
         ),
       ],
     );

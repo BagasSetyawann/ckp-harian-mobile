@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/input_kegiatan_screen.dart';
@@ -8,8 +9,9 @@ import 'screens/rk_nilai_screen.dart';
 import 'screens/profil_screen.dart';
 import 'screens/changelog_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ThemeController.init();
   await ApiService.init();
   runApp(const SiCkpMobileApp());
 }
@@ -22,45 +24,46 @@ class SiCkpMobileApp extends StatefulWidget {
 }
 
 class _SiCkpMobileAppState extends State<SiCkpMobileApp> {
-  bool _loggedIn = ApiService.token != null && ApiService.currentUser != null;
+  late bool _loggedIn;
+
+  @override
+  void initState() {
+    super.initState();
+    _loggedIn = ApiService.token != null && ApiService.currentUser != null;
+  }
+
+  Future<void> _handleLogout() async {
+    await ApiService.logout();
+    if (mounted) {
+      setState(() => _loggedIn = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SI-CKP Mobile',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0284C7),
-          primary: const Color(0xFF0284C7),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1E293B),
-          elevation: 0,
-          centerTitle: false,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1E293B),
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      home: _loggedIn
-          ? MainShell(
-              onLogout: () => setState(() => _loggedIn = false),
-            )
-          : LoginScreen(
-              onLoginSuccess: () => setState(() => _loggedIn = true),
-            ),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'SI-CKP Mobile',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          home: _loggedIn
+              ? MainShell(onLogout: _handleLogout)
+              : LoginScreen(
+                  onLoginSuccess: () => setState(() => _loggedIn = true),
+                ),
+        );
+      },
     );
   }
 }
 
 class MainShell extends StatefulWidget {
   final VoidCallback onLogout;
+
   const MainShell({super.key, required this.onLogout});
 
   @override
@@ -68,30 +71,55 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  int _selectedIndex = 0;
 
-  final List<String> _titles = [
-    'SI-CKP Mobile',
-    'Input CKP Harian',
+  static const _titles = [
+    'Beranda',
+    'Input CKP',
     'Riwayat Kegiatan',
-    'Nilai CKP & Laporan',
-    'Profil Pegawai',
+    'Nilai CKP',
+    'Profil',
   ];
+
+  void _openChangelog() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      HomeScreen(
-        onTapInputCKP: () => setState(() => _currentIndex = 1),
-        onTapRiwayat: () => setState(() => _currentIndex = 2),
-      ),
-      InputKegiatanScreen(
-        onSuccess: () => setState(() => _currentIndex = 2),
-      ),
-      const RiwayatKegiatanScreen(),
-      const RkNilaiScreen(),
-      ProfilScreen(onLogout: widget.onLogout),
-    ];
+    final p = AppTheme.of(context);
+    final isDark = ThemeController.isDark(context);
+
+    Widget body;
+    switch (_selectedIndex) {
+      case 0:
+        body = HomeScreen(
+          onTapInputCKP: () => setState(() => _selectedIndex = 1),
+          onTapRiwayat: () => setState(() => _selectedIndex = 2),
+        );
+        break;
+      case 1:
+        body = InputKegiatanScreen(
+          onSuccess: () => setState(() => _selectedIndex = 2),
+        );
+        break;
+      case 2:
+        body = const RiwayatKegiatanScreen();
+        break;
+      case 3:
+        body = const RkNilaiScreen();
+        break;
+      case 4:
+        body = ProfilScreen(onLogout: widget.onLogout);
+        break;
+      default:
+        body = HomeScreen(
+          onTapInputCKP: () => setState(() => _selectedIndex = 1),
+          onTapRiwayat: () => setState(() => _selectedIndex = 2),
+        );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -101,78 +129,114 @@ class _MainShellState extends State<MainShell> {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: const Color(0xFF0284C7),
+                color: p.primaryDeep,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: p.heroBorder),
               ),
-              child: const Icon(Icons.phone_android_rounded, color: Colors.white, size: 18),
+              child: const Icon(Icons.fact_check_rounded, size: 17, color: Colors.white),
             ),
             const SizedBox(width: 10),
-            Text(_titles[_currentIndex]),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'SI-CKP',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: p.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                Text(
+                  _titles[_selectedIndex],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: p.textMuted,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: TextButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChangelogScreen()),
-                );
-              },
-              icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF0284C7)),
-              label: const Text(
-                'Changelog',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-              ),
-              style: TextButton.styleFrom(
-                backgroundColor: const Color(0xFFE0F2FE),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.only(right: 4),
+            child: InkWell(
+              onTap: _openChangelog,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: p.surfaceMuted,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: p.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome_outlined, size: 13, color: p.primary),
+                    const SizedBox(width: 5),
+                    Text(
+                      'v1.3',
+                      style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: p.textPrimary),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+          IconButton(
+            tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+            onPressed: ThemeController.toggle,
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              size: 20,
+              color: p.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 4),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
-        ),
       ),
-      body: pages[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE0F2FE),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF0284C7)),
-            label: 'Beranda',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle_rounded, color: Color(0xFF0284C7)),
-            label: 'Input CKP',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history_rounded, color: Color(0xFF0284C7)),
-            label: 'Riwayat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.workspace_premium_outlined),
-            selectedIcon: Icon(Icons.workspace_premium_rounded, color: Color(0xFF0284C7)),
-            label: 'Nilai CKP',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF0284C7)),
-            label: 'Profil',
-          ),
-        ],
+      body: body,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: p.border, width: 1)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.space_dashboard_outlined),
+              selectedIcon: Icon(Icons.space_dashboard_rounded),
+              label: 'Beranda',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.add_circle_outline_rounded),
+              selectedIcon: Icon(Icons.add_circle_rounded),
+              label: 'Input',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.list_alt_outlined),
+              selectedIcon: Icon(Icons.list_alt_rounded),
+              label: 'Riwayat',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              selectedIcon: Icon(Icons.analytics_rounded),
+              label: 'Nilai',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-

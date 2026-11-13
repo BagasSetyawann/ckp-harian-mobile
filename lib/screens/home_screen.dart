@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/ui_components.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onTapInputCKP;
@@ -17,430 +19,448 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Map<String, dynamic>? _data;
+  Map<String, dynamic>? _dashboard;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchDashboard();
+    _loadData();
   }
 
-  Future<void> _fetchDashboard() async {
+  Future<void> _loadData() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final res = await ApiService.getPegawaiDashboard();
-      if (mounted) setState(() => _data = res);
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _dashboard = res);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Gagal memuat data beranda dari server.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<void> _downloadExcel(int periodId) async {
+    final uri = Uri.parse(ApiService.getExcelExportUrl(periodId: periodId));
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka tautan unduhan Excel.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = ApiService.currentUser;
-    final nama = user?['employee']?['nama'] ?? user?['username'] ?? 'Pegawai';
-    final jabatan = user?['employee']?['jabatan'] ?? 'Anggota';
+    final p = AppTheme.of(context);
+    final user = ApiService.currentUser ?? {};
 
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+    if (_loading && _dashboard == null) {
+      return Center(child: CircularProgressIndicator(color: p.primary));
     }
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _fetchDashboard,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Coba Lagi'),
-              ),
-            ],
+    if (_error != null && _dashboard == null) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: ExecutiveEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Koneksi Bermasalah',
+            subtitle: _error!,
+            buttonLabel: 'Coba Lagi',
+            onPressed: _loadData,
           ),
         ),
       );
     }
 
-    final sudahIsi = _data?['sudah_isi_hari_ini'] == true;
-    final todayActivities = (_data?['today_activities'] as List?) ?? [];
-    final todayAvg = _data?['today_avg_capaian'] ?? 0;
-    final monthStats = (_data?['month_stats'] as Map<String, dynamic>?) ?? {};
-    final ckpScore = _data?['ckp_score'] as Map<String, dynamic>?;
-    final period = _data?['period'] as Map<String, dynamic>?;
+    final period = _dashboard?['period'] as Map<String, dynamic>?;
+    final sudahIsi = _dashboard?['sudah_isi_hari_ini'] == true;
+    final todayStr = (_dashboard?['today'] ?? '').toString();
+    final todayActivities = (_dashboard?['today_activities'] as List<dynamic>?) ?? [];
+    final todayAvg = (_dashboard?['today_avg_capaian'] as num?)?.toInt() ?? 0;
+    final monthStats = (_dashboard?['month_stats'] as Map<String, dynamic>?) ?? {};
+    final ckpScore = _dashboard?['ckp_score'] as Map<String, dynamic>?;
+
+    final totalKegiatan = (monthStats['total_kegiatan'] as num?)?.toInt() ?? 0;
+    final hariPengisian = (monthStats['hari_pengisian'] as num?)?.toInt() ?? 0;
+    final hariKerja = (monthStats['hari_kerja'] as num?)?.toInt() ?? 0;
+    final avgCapaian = (monthStats['avg_capaian'] as num?)?.toInt() ?? 0;
+    final buktiCount = (monthStats['bukti_dukung'] as num?)?.toInt() ?? 0;
+    final nilaiCkp = (ckpScore?['nilai_ckp'] as num?)?.toDouble();
 
     return RefreshIndicator(
-      onRefresh: _fetchDashboard,
+      onRefresh: _loadData,
+      color: p.primary,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          // Greeting Header Card
+          // Executive Hero Card (Deep Navy / Slate)
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                colors: [p.heroStart, p.heroEnd],
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0284C7).withOpacity(0.25),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: p.heroBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                      ),
                       child: Text(
-                        nama.toString().substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                        period != null ? (period['nama'] ?? 'Periode Aktif').toString() : 'Tidak Ada Periode Aktif',
+                        style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: const Color(0xFFE2E8F0)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const Spacer(),
+                    if (nilaiCkp != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          'CKP ${nilaiCkp.toStringAsFixed(1)}',
+                          style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: const Color(0xFF38BDF8)),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Halo, ${(user['nama'] ?? 'Pegawai').toString()}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${user['jabatan'] ?? 'Pegawai'}${user['unit_kerja'] != null ? ' · ${user['unit_kerja']}' : ''}',
+                  style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.78)),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Halo, $nama',
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '$jabatan · Periode ${period?['nama'] ?? '-'}',
-                            style: const TextStyle(color: Color(0xFFBAE6FD), fontSize: 12),
-                          ),
-                        ],
+                      child: ElevatedButton.icon(
+                        onPressed: widget.onTapInputCKP,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Input Kegiatan Hari Ini'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0F172A),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: ElevatedButton.icon(
-                    onPressed: widget.onTapInputCKP,
-                    icon: const Icon(Icons.add_circle_outline, size: 20),
-                    label: const Text(
-                      'Input Kegiatan CKP Hari Ini',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0369A1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Status Hari Ini Banner
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: sudahIsi ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: sudahIsi ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
-              ),
-            ),
+          // Today status card
+          HairlineCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            color: sudahIsi ? p.successBg : p.warningBg,
+            borderColor: (sudahIsi ? p.success : p.warning).withValues(alpha: 0.3),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
-                    color: sudahIsi ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    sudahIsi ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
-                    color: sudahIsi ? const Color(0xFF059669) : const Color(0xFFD97706),
-                    size: 26,
+                    color: sudahIsi ? p.success : p.warning,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sudahIsi ? 'CKP Hari Ini Sudah Diisi' : 'Belum Mengisi CKP Hari Ini',
+                        sudahIsi
+                            ? 'Sudah mengisi ${todayActivities.length} kegiatan hari ini'
+                            : 'Belum ada catatan kegiatan hari ini',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: sudahIsi ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: p.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         sudahIsi
-                            ? '${todayActivities.length} kegiatan hari ini · Rata-rata capaian $todayAvg%'
-                            : 'Ketuk tombol di atas untuk mencatat kegiatan harian Anda.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: sudahIsi ? const Color(0xFF047857) : const Color(0xFFB45309),
-                        ),
+                            ? 'Tanggal $todayStr · Rata-rata capaian $todayAvg%'
+                            : 'Segera catat aktivitas harian beserta foto/bukti GPS.',
+                        style: TextStyle(fontSize: 11.5, color: p.textSecondary),
                       ),
                     ],
                   ),
                 ),
+                if (!sudahIsi) ...[
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: widget.onTapInputCKP,
+                    style: TextButton.styleFrom(
+                      foregroundColor: p.warning,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    child: const Text('Isi', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ],
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // 4 Stat Cards Grid
+          // 2x2 Stat Grid
           GridView.count(
-            crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
+            crossAxisCount: 2,
             crossAxisSpacing: 10,
-            childAspectRatio: 1.65,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.55,
             children: [
-              _buildStatCard(
-                icon: Icons.today_rounded,
-                label: 'Hari Ini',
-                value: '${todayActivities.length}',
-                sub: 'Kegiatan',
-                color: const Color(0xFF0284C7),
+              _StatCard(
+                label: 'Total Kegiatan',
+                value: '$totalKegiatan',
+                sublabel: 'Bulan ini',
+                icon: Icons.assignment_turned_in_outlined,
+                accentColor: p.primary,
+                accentBg: p.primaryContainer,
               ),
-              _buildStatCard(
-                icon: Icons.calendar_month_rounded,
-                label: 'Bulan Ini',
-                value: '${monthStats['total_kegiatan'] ?? 0}',
-                sub: '${monthStats['hari_pengisian'] ?? 0} hari isi',
-                color: const Color(0xFF059669),
+              _StatCard(
+                label: 'Hari Mengisi',
+                value: '$hariPengisian/$hariKerja',
+                sublabel: 'Hari kerja',
+                icon: Icons.calendar_today_outlined,
+                accentColor: p.info,
+                accentBg: p.infoBg,
               ),
-              _buildStatCard(
-                icon: Icons.folder_special_rounded,
+              _StatCard(
+                label: 'Rata-rata Capaian',
+                value: '$avgCapaian%',
+                sublabel: 'Target harian',
+                icon: Icons.trending_up_rounded,
+                accentColor: p.success,
+                accentBg: p.successBg,
+              ),
+              _StatCard(
                 label: 'Bukti Dukung',
-                value: '${monthStats['bukti_dukung'] ?? 0}',
-                sub: 'File & Link',
-                color: const Color(0xFF7C3AED),
-              ),
-              _buildStatCard(
-                icon: Icons.workspace_premium_rounded,
-                label: 'Nilai CKP',
-                value: '${ckpScore?['nilai_ckp'] ?? '—'}',
-                sub: ckpScore?['status'] == 'final' ? 'Final' : 'Draft',
-                color: const Color(0xFFD97706),
+                value: '$buktiCount',
+                sublabel: 'File & tautan',
+                icon: Icons.attach_file_rounded,
+                accentColor: p.warning,
+                accentBg: p.warningBg,
               ),
             ],
           ),
 
-          const SizedBox(height: 18),
-
-          // Kegiatan Hari Ini Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Kegiatan Hari Ini',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              TextButton(
-                onPressed: widget.onTapRiwayat,
-                child: const Text('Lihat Semua →', style: TextStyle(fontSize: 12.5)),
-              ),
-            ],
-          ),
-          if (todayActivities.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: const Center(
-                child: Text(
-                  'Belum ada kegiatan yang diinput hari ini.',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                ),
-              ),
-            )
-          else
-            ...todayActivities.map((act) {
-              final capaian = act['persentase_capaian'] ?? 0;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$capaian%',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Color(0xFF0284C7),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            act['nama_kegiatan'] ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Status: ${act['status_kegiatan'] ?? 'selesai'}',
-                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-          const SizedBox(height: 16),
-
-          // Download Hasil Kerja Periode Ini Card
-          if (period != null && period['id'] != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          if (period != null && period['id'] != null) ...[
+            const SizedBox(height: 12),
+            HairlineCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              onTap: () => _downloadExcel(period['id'] as int),
+              child: Row(
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.download_for_offline_rounded, color: Color(0xFF059669), size: 22),
-                      SizedBox(width: 8),
-                      Text(
-                        'Unduh Hasil Kerja per Periode',
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                      ),
-                    ],
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: p.successBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: p.success.withValues(alpha: 0.25)),
+                    ),
+                    child: Icon(Icons.table_view_outlined, size: 18, color: p.success),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Unduh rekap seluruh kegiatan harian Anda pada periode ${period['nama']} dalam format Excel (.xlsx).',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final url = ApiService.getExcelExportUrl(periodId: (period['id'] as num).toInt());
-                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                      },
-                      icon: const Icon(Icons.table_view_rounded, size: 18, color: Color(0xFF059669)),
-                      label: Text(
-                        'Download Excel (${period['nama']})',
-                        style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF059669)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Unduh Laporan Hasil Kerja (.xlsx)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p.textPrimary),
+                        ),
+                        Text(
+                          'Periode ${period['nama'] ?? ''}',
+                          style: TextStyle(fontSize: 11.5, color: p.textMuted),
+                        ),
+                      ],
                     ),
                   ),
+                  Icon(Icons.download_rounded, size: 19, color: p.textMuted),
                 ],
               ),
             ),
-        ],
-      ),
-    );
-  }
+          ],
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required String sub,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
+          const SizedBox(height: 18),
+          SectionHeader(
+            title: 'Kegiatan Hari Ini',
+            actionLabel: 'Semua Riwayat',
+            onAction: widget.onTapRiwayat,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          const SizedBox(height: 10),
+
+          if (todayActivities.isEmpty)
+            ExecutiveEmptyState(
+              icon: Icons.edit_calendar_outlined,
+              title: 'Belum Ada Catatan Hari Ini',
+              subtitle: 'Tambahkan realisasi kerja harian Anda agar progres periode tetap terjaga.',
+              buttonLabel: 'Catat Kegiatan',
+              onPressed: widget.onTapInputCKP,
+            )
+          else
+            ...todayActivities.map((item) {
+              final act = item as Map<String, dynamic>;
+              final pct = (act['persentase_capaian'] as num?)?.toInt() ?? 0;
+              final status = (act['status_kegiatan'] ?? 'selesai').toString();
+              final isDone = status == 'selesai';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: HairlineCard(
+                  padding: const EdgeInsets.all(14),
+                  onTap: widget.onTapRiwayat,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          StatusDotBadge(
+                            label: isDone ? 'Selesai' : 'Proses',
+                            color: isDone ? p.success : p.warning,
+                            bgColor: isDone ? p.successBg : p.warningBg,
+                          ),
+                          const Spacer(),
+                          MonoPill(
+                            text: '$pct%',
+                            color: pct >= 80 ? p.success : p.primary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 9),
+                      Text(
+                        (act['nama_kegiatan'] ?? '-').toString(),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: p.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (act['target'] != null && act['realisasi'] != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Realisasi: ${act['realisasi']} / ${act['target']} ${act['satuan'] ?? ''}',
+                          style: AppTheme.mono(size: 11.5, color: p.textMuted),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                Text(sub, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
-              ],
-            ),
-          ),
+              );
+            }),
         ],
       ),
     );
   }
 }
 
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String sublabel;
+  final IconData icon;
+  final Color accentColor;
+  final Color accentBg;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.sublabel,
+    required this.icon,
+    required this.accentColor,
+    required this.accentBg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = AppTheme.of(context);
+    return HairlineCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: accentBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 15, color: accentColor),
+              ),
+              const Spacer(),
+              Text(
+                sublabel,
+                style: TextStyle(fontSize: 10.5, color: p.textMuted, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: AppTheme.mono(size: 20, weight: FontWeight.w700, color: p.textPrimary),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: p.textSecondary, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

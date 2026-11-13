@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/ui_components.dart';
 import 'changelog_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
+
   const LoginScreen({super.key, required this.onLoginSuccess});
 
   @override
@@ -11,361 +14,439 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+
   bool _obscurePassword = true;
   bool _loading = false;
-  String? _error;
+  bool _showDemo = false;
+  String? _errorMsg;
 
-  final List<Map<String, String>> _demoPegawai = [
-    {'username': 'budi', 'nama': 'Budi Santoso, S.Stat', 'bidang': 'Neraca Wilayah'},
-    {'username': 'sari', 'nama': 'Sari Dewi Lestari, S.E', 'bidang': 'Neraca Wilayah'},
-    {'username': 'reza', 'nama': 'Reza Firmansyah, S.T', 'bidang': 'Bidang IPDS'},
-    {'username': 'dewi', 'nama': 'Dewi Rahayu, S.Sos', 'bidang': 'Bidang Sosial'},
+  static const _demoPegawai = [
+    {'username': 'budi', 'nama': 'Budi Santoso', 'jabatan': 'Statistisi Muda'},
+    {'username': 'sari', 'nama': 'Sari Dewi L.', 'jabatan': 'Analis Kebijakan'},
+    {'username': 'reza', 'nama': 'Reza Firmansyah', 'jabatan': 'Pranata Komputer'},
+    {'username': 'dewi', 'nama': 'Dewi Rahayu', 'jabatan': 'Statistisi Pertama'},
   ];
 
-  Future<void> _handleLogin() async {
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text;
-    if (username.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Username dan password wajib diisi');
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit([String? demoUser]) async {
+    if (demoUser != null) {
+      _usernameCtrl.text = demoUser;
+      _passwordCtrl.text = 'password123';
+    } else if (!_formKey.currentState!.validate()) {
       return;
     }
 
     setState(() {
       _loading = true;
-      _error = null;
+      _errorMsg = null;
     });
 
     try {
-      await ApiService.login(username, password);
-      widget.onLoginSuccess();
-    } catch (e) {
-      setState(() => _error = e.toString());
+      await ApiService.login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (mounted) widget.onLoginSuccess();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _errorMsg = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _errorMsg = 'Tidak dapat terhubung ke server API. Periksa koneksi atau konfigurasi URL.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _showServerDialog() {
+  Future<void> _showServerDialog() async {
     final ctrl = TextEditingController(text: ApiService.baseUrl);
-    showDialog(
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfigurasi Server API', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'URL Backend SI-CKP (Vercel / Lokal):',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: ctrl,
-              decoration: const InputDecoration(
-                hintText: 'https://ckp-harian-backend.vercel.app/api',
-                border: OutlineInputBorder(),
-                isDense: true,
+      builder: (ctx) {
+        final p = AppTheme.of(ctx);
+        return AlertDialog(
+          title: const Text('Konfigurasi Server API', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Masukkan URL endpoint backend SI-CKP.',
+                style: TextStyle(fontSize: 12.5, color: p.textMuted),
               ),
-            ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                style: AppTheme.mono(size: 12.5, color: p.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Base URL API',
+                  hintText: 'https://ckp-harian-backend.vercel.app/api',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Simpan')),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await ApiService.setBaseUrl(ctrl.text);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Server diatur ke: ${ApiService.baseUrl}')),
-                );
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+        );
+      },
     );
+
+    if (saved == true && ctrl.text.trim().isNotEmpty) {
+      await ApiService.setBaseUrl(ctrl.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Server API diperbarui: ${ApiService.baseUrl}')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = AppTheme.of(context);
+    final isDark = ThemeController.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF075985),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Card
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.18),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
+        child: Column(
+          children: [
+            // Minimalist top utility bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: p.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: p.border),
                       ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF0284C7), Color(0xFF075985)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.auto_awesome_outlined, size: 14, color: p.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Changelog',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.textSecondary),
                           ),
-                        ),
-                        child: Column(
+                          const SizedBox(width: 6),
+                          Text(
+                            'v1.3',
+                            style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: p.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+                    onPressed: ThemeController.toggle,
+                    style: IconButton.styleFrom(
+                      side: BorderSide(color: p.border),
+                      backgroundColor: p.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      minimumSize: const Size(36, 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: Icon(
+                      isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      size: 17,
+                      color: p.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    tooltip: 'Pengaturan Server API',
+                    onPressed: _showServerDialog,
+                    style: IconButton.styleFrom(
+                      side: BorderSide(color: p.border),
+                      backgroundColor: p.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      minimumSize: const Size(36, 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: Icon(Icons.dns_outlined, size: 17, color: p.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+
+            // Centered Form
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Brand header
+                        Row(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  onPressed: _showServerDialog,
-                                  icon: const Icon(Icons.settings_ethernet, color: Colors.white70, size: 20),
-                                  tooltip: 'Atur URL Server',
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ],
-                            ),
                             Container(
-                              width: 64,
-                              height: 64,
+                              width: 44,
+                              height: 44,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(18),
+                                color: p.primaryDeep,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: p.heroBorder),
                               ),
-                              child: const Icon(Icons.phone_android_rounded, color: Colors.white, size: 34),
+                              child: const Icon(Icons.fact_check_rounded, color: Colors.white, size: 22),
                             ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
-                                borderRadius: BorderRadius.circular(20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'DINAS STATISTIK DAERAH',
+                                    style: AppTheme.mono(
+                                      size: 10.5,
+                                      weight: FontWeight.w600,
+                                      color: p.primary,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'SI-CKP Mobile',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: p.textPrimary,
+                                      letterSpacing: -0.4,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: const Text(
-                                'Aplikasi Input Pegawai',
-                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'SI-CKP Mobile',
-                              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Input Cepat CKP Harian & Bukti Dukung',
-                              style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 13),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Dinas Statistik Daerah',
-                              style: TextStyle(color: Color(0xFF7DD3FC), fontSize: 11),
                             ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Masuk untuk mencatat kegiatan harian, melampirkan dokumentasi GPS, dan memantau nilai CKP.',
+                          style: TextStyle(fontSize: 13, color: p.textMuted, height: 1.45),
+                        ),
+                        const SizedBox(height: 22),
 
-                      // Form Body
-                      Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text(
-                              'Masuk Akun Pegawai',
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Isi kegiatan harian dan unggah dokumentasi langsung dari smartphone Anda.',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 16),
-
-                            if (_error != null) ...[
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFFECACA)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _error!,
-                                        style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12.5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                            ],
-
-                            TextField(
-                              controller: _usernameController,
-                              textInputAction: TextInputAction.next,
-                              decoration: InputDecoration(
-                                labelText: 'Username',
-                                prefixIcon: const Icon(Icons.person_outline),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              onSubmitted: (_) => _handleLogin(),
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                                ),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-
-                            SizedBox(
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: _loading ? null : _handleLogin,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0284C7),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
-                                ),
-                                child: _loading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                                      )
-                                    : const Text('Masuk Sekarang', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                            const Divider(height: 1),
-                            const SizedBox(height: 14),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Login Card
+                        HairlineCard(
+                          padding: const EdgeInsets.all(20),
+                          radius: 16,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text(
-                                  'Akun Demo Pegawai (Tap untuk isi):',
-                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const ChangelogScreen()),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.auto_awesome_rounded, size: 14),
-                                  label: const Text('Changelog v1.3', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 8,
-                              crossAxisSpacing: 8,
-                              childAspectRatio: 2.5,
-                              children: _demoPegawai.map((u) {
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _usernameController.text = u['username']!;
-                                      _passwordController.text = 'password123';
-                                      _error = null;
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                if (_errorMsg != null) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      color: p.dangerBg,
                                       borderRadius: BorderRadius.circular(10),
-                                      color: const Color(0xFFF8FAFC),
+                                      border: Border.all(color: p.danger.withValues(alpha: 0.35)),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                    child: Row(
                                       children: [
-                                        Text(
-                                          u['nama']!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-                                        ),
-                                        Text(
-                                          '@${u['username']} · ${u['bidang']}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                                        Icon(Icons.error_outline_rounded, size: 18, color: p.danger),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _errorMsg!,
+                                            style: TextStyle(fontSize: 12.5, color: p.danger, fontWeight: FontWeight.w500),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                );
-                              }).toList(),
+                                  const SizedBox(height: 16),
+                                ],
+
+                                Text(
+                                  'Username',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _usernameCtrl,
+                                  textInputAction: TextInputAction.next,
+                                  autocorrect: false,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Masukkan username pegawai',
+                                    prefixIcon: Icon(Icons.person_outline_rounded, size: 19),
+                                  ),
+                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Username wajib diisi' : null,
+                                ),
+                                const SizedBox(height: 14),
+
+                                Text(
+                                  'Password',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.textSecondary),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _passwordCtrl,
+                                  obscureText: _obscurePassword,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  decoration: InputDecoration(
+                                    hintText: 'Masukkan password',
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 19),
+                                    suffixIcon: IconButton(
+                                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                      icon: Icon(
+                                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                        size: 19,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (v) => (v == null || v.isEmpty) ? 'Password wajib diisi' : null,
+                                ),
+                                const SizedBox(height: 18),
+
+                                ElevatedButton(
+                                  onPressed: _loading ? null : () => _submit(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDark ? p.primary : p.primary,
+                                    foregroundColor: p.onPrimary,
+                                    minimumSize: const Size.fromHeight(48),
+                                  ),
+                                  child: _loading
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2.2, color: p.onPrimary),
+                                        )
+                                      : const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text('Masuk'),
+                                            SizedBox(width: 8),
+                                            Icon(Icons.arrow_forward_rounded, size: 18),
+                                          ],
+                                        ),
+                                ),
+
+                                // Collapsible Demo Accounts
+                                const SizedBox(height: 18),
+                                Divider(height: 1, color: p.border),
+                                const SizedBox(height: 12),
+                                InkWell(
+                                  onTap: () => setState(() => _showDemo = !_showDemo),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Akses Akun Demo (Uji Coba)',
+                                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: p.textMuted),
+                                        ),
+                                        Icon(
+                                          _showDemo ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                          size: 20,
+                                          color: p.textMuted,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                if (_showDemo) ...[
+                                  const SizedBox(height: 10),
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 2.2,
+                                    ),
+                                    itemCount: _demoPegawai.length,
+                                    itemBuilder: (_, idx) {
+                                      final item = _demoPegawai[idx];
+                                      return InkWell(
+                                        onTap: _loading ? null : () => _submit(item['username']),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: p.surfaceMuted,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: p.border),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                item['nama']!,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: p.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '@${item['username']}',
+                                                style: AppTheme.mono(size: 11, color: p.primary),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Password default: password123',
+                                    textAlign: TextAlign.center,
+                                    style: AppTheme.mono(size: 11, color: p.textMuted),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 20),
+                        Text(
+                          '© 2026 SI-CKP · Dinas Statistik Daerah',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, color: p.textMuted),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '© 2026 SI-CKP Mobile · Terhubung ke Portal Web Monitoring',
-                  style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 11.5),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
-
