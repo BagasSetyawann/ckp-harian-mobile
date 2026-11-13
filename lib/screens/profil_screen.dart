@@ -163,15 +163,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 decoration: BoxDecoration(
                   color: p.primary,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: p.border, width: 2),
-                  boxShadow: [
-                    BoxShadow(color: p.shadow, offset: const Offset(2, 3)),
-                  ],
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   _initials(nama),
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(width: 14),

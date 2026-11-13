@@ -14,7 +14,7 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
   static const List<Map<String, dynamic>> _fallbackChangelogs = [
     {
       'versi': 'v1.4.0',
-      'judul': 'Redesign & Rebranding KASI JADI (Neo-Brutalism)',
+      'judul': 'Transformasi Identitas KASI JADI & Pembaruan Desain Formal',
       'tanggal': '2026-11-13',
       'tipe': 'major',
       'perubahan': [
@@ -22,13 +22,13 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
           'kategori': 'Perubahan',
           'platform': 'Web & Mobile',
           'deskripsi':
-              'Transformasi penuh ke identitas KASI JADI (Kanal Sistem Jurnal Aktivitas Dan Kinerja) bergaya Neo-Brutalism dengan palet Biru Elektrik, Toska, dan Oranye Hangat serta aksen tenun geometris.',
+              'Transformasi penuh ke identitas KASI JADI (Kanal Sistem Jurnal Aktivitas Dan Kinerja) bergaya formal instansi dengan palet Biru Korporat (#0052FF) dan tipografi Plus Jakarta Sans.',
         },
         {
           'kategori': 'Fitur Baru',
           'platform': 'Web & Mobile',
           'deskripsi':
-              'Menghadirkan ikon outline kustom KJ, tombol GAS ISI! dan BERES!, serta banner pengingat interaktif harian.',
+              'Integrasi ikon outline formal KASI JADI, tata letak kartu bersih, serta pencatatan aktivitas dengan koordinat geotag GPS dan rekap periode.',
         },
       ],
     },
@@ -175,73 +175,65 @@ class _ChangelogScreenState extends State<ChangelogScreen> {
                   end: Alignment.bottomRight,
                   colors: [p.heroStart, p.heroEnd],
                 ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: p.border, width: 2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: p.heroBorder, width: 1),
                 boxShadow: [
-                  BoxShadow(color: p.shadow, offset: const Offset(4, 5)),
+                  BoxShadow(
+                    color: p.shadow,
+                    offset: const Offset(0, 3),
+                    blurRadius: 12,
+                  ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Column(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Row(
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withAlpha(65), width: 1),
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(34),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withAlpha(90), width: 1.5),
-                            ),
-                            child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFF6B35), size: 22),
+                          Row(
+                            children: [
+                              const Text(
+                                'Changelog KASI JADI',
+                                style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha(38),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: Colors.white.withAlpha(80), width: 1),
+                                ),
+                                child: Text(
+                                  _items.isNotEmpty ? (_items.first['versi'] ?? 'v1.4.0').toString() : 'v1.4.0',
+                                  style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: Colors.white),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Changelog KASI JADI',
-                                      style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Colors.white),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF00B4D8),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(color: const Color(0xFF1E293B), width: 1.5),
-                                      ),
-                                      child: Text(
-                                        _items.isNotEmpty ? (_items.first['versi'] ?? 'v1.4.0').toString() : 'v1.4.0',
-                                        style: AppTheme.mono(size: 11, weight: FontWeight.w700, color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  _fromCache
-                                      ? 'Menampilkan catatan rilis lokal aplikasi.'
-                                      : 'Catatan rilis resmi Web, Mobile & Backend.',
-                                  style: TextStyle(fontSize: 12, color: Colors.white.withAlpha(210)),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _fromCache
+                                ? 'Menampilkan catatan rilis lokal aplikasi.'
+                                : 'Catatan rilis resmi Web, Mobile & Backend.',
+                            style: TextStyle(fontSize: 12, color: Colors.white.withAlpha(210)),
                           ),
                         ],
                       ),
-                    ),
-                    const KjTenunStrip(
-                      height: 8,
-                      opacity: 0.25,
-                      color: Colors.white,
                     ),
                   ],
                 ),

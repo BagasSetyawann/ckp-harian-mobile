@@ -157,7 +157,7 @@ class EvidenceHelpers {
                   ),
                 );
               },
-              child: const Text('BERES! Tambahkan'),
+              child: const Text('Tambahkan'),
             ),
           ],
         );

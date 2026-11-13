@@ -217,7 +217,7 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                         MonoPill(text: (act['tanggal'] ?? '-').toString()),
                                         const SizedBox(width: 8),
                                         StatusDotBadge(
-                                          label: isDone ? 'BERES!' : 'Proses',
+                                          label: isDone ? 'Selesai' : 'Proses',
                                           color: isDone ? p.success : p.warning,
                                           bgColor: isDone ? p.successBg : p.warningBg,
                                         ),
@@ -258,8 +258,8 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: p.infoBg,
-                                          borderRadius: BorderRadius.circular(9),
-                                          border: Border.all(color: p.border, width: 1.4),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: p.info.withAlpha(55), width: 1),
                                         ),
                                         child: Row(
                                           children: [
@@ -289,8 +289,8 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                             decoration: BoxDecoration(
                                               color: p.tealBg,
-                                              borderRadius: BorderRadius.circular(9),
-                                              border: Border.all(color: p.border, width: 1.5),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: p.teal.withAlpha(65), width: 1),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -301,7 +301,7 @@ class _RiwayatKegiatanScreenState extends State<RiwayatKegiatanScreen> {
                                                   '$totalBukti Bukti',
                                                   style: TextStyle(
                                                     fontSize: 12,
-                                                    fontWeight: FontWeight.w800,
+                                                    fontWeight: FontWeight.w700,
                                                     color: p.textPrimary,
                                                   ),
                                                 ),

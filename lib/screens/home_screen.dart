@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          // KASI JADI Hero Card (Biru Elektrik + Neo-Brutalism)
+          // KASI JADI Hero Card Formal Instansi
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -113,100 +113,88 @@ class _HomeScreenState extends State<HomeScreen> {
                 end: Alignment.bottomRight,
                 colors: [p.heroStart, p.heroEnd],
               ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: p.border, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: p.heroBorder, width: 1),
               boxShadow: [
                 BoxShadow(
                   color: p.shadow,
-                  offset: const Offset(4, 5),
+                  offset: const Offset(0, 3),
+                  blurRadius: 12,
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(36),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white.withAlpha(90), width: 1.5),
-                              ),
-                              child: Text(
-                                period != null
-                                    ? (period['nama'] ?? 'Periode Aktif').toString()
-                                    : 'Tidak Ada Periode Aktif',
-                                style: AppTheme.mono(
-                                  size: 11,
-                                  weight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (nilaiCkp != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00B4D8),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(color: const Color(0xFF1E293B), width: 1.5),
-                                ),
-                                child: Text(
-                                  'CKP ${nilaiCkp.toStringAsFixed(1)}',
-                                  style: AppTheme.mono(
-                                    size: 11,
-                                    weight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                          ],
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(32),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withAlpha(65), width: 1),
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Halo, ${(user['nama'] ?? 'Pegawai').toString()}',
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
+                        child: Text(
+                          period != null
+                              ? (period['nama'] ?? 'Periode Aktif').toString()
+                              : 'Tidak Ada Periode Aktif',
+                          style: AppTheme.mono(
+                            size: 11,
+                            weight: FontWeight.w600,
                             color: Colors.white,
-                            letterSpacing: -0.3,
                           ),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${user['jabatan'] ?? 'Pegawai'}${user['unit_kerja'] != null ? ' · ${user['unit_kerja']}' : ''}',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withAlpha(215),
+                      ),
+                      const Spacer(),
+                      if (nilaiCkp != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(38),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: Colors.white.withAlpha(80), width: 1),
+                          ),
+                          child: Text(
+                            'CKP ${nilaiCkp.toStringAsFixed(1)}',
+                            style: AppTheme.mono(
+                              size: 11,
+                              weight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        KjNeoButton(
-                          label: sudahIsi ? 'Tambah Kegiatan' : 'GAS ISI! Kegiatan',
-                          icon: Icons.add_rounded,
-                          variant: KjButtonVariant.orange,
-                          expand: true,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          onPressed: widget.onTapInputCKP,
-                        ),
-                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Halo, ${(user['nama'] ?? 'Pegawai').toString()}',
+                    style: const TextStyle(
+                      fontSize: 18.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: -0.25,
                     ),
                   ),
-                  const KjTenunStrip(
-                    height: 8,
-                    opacity: 0.26,
-                    color: Colors.white,
+                  const SizedBox(height: 3),
+                  Text(
+                    '${user['jabatan'] ?? 'Pegawai'}${user['unit_kerja'] != null ? ' · ${user['unit_kerja']}' : ''}',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withAlpha(215),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  KjNeoButton(
+                    label: sudahIsi ? 'Tambah Kegiatan' : 'Input Kegiatan',
+                    icon: Icons.add_rounded,
+                    variant: KjButtonVariant.secondary,
+                    expand: true,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    onPressed: widget.onTapInputCKP,
                   ),
                 ],
               ),
@@ -216,8 +204,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!sudahIsi && !_reminderDismissed) ...[
             const SizedBox(height: 12),
             KjReminderBanner(
-              message: 'Jangan lupa spill kerjaan hari ini, Jo!',
-              ctaLabel: 'GAS ISI!',
+              message: 'Anda belum mencatat realisasi kegiatan hari ini.',
+              ctaLabel: 'Input Kegiatan',
               onTapCta: widget.onTapInputCKP,
               onDismiss: () => setState(() => _reminderDismissed = true),
             ),
@@ -228,17 +216,16 @@ class _HomeScreenState extends State<HomeScreen> {
           // Today status card
           HairlineCard(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            color: sudahIsi ? p.tealBg : p.orangeBg,
-            borderColor: p.border,
+            color: sudahIsi ? p.tealBg : p.warningBg,
+            borderColor: sudahIsi ? p.teal.withAlpha(70) : p.warning.withAlpha(70),
             child: Row(
               children: [
                 Container(
-                  width: 10,
-                  height: 10,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
-                    color: sudahIsi ? p.teal : p.orange,
+                    color: sudahIsi ? p.teal : p.warning,
                     shape: BoxShape.circle,
-                    border: Border.all(color: p.border, width: 1.5),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -248,11 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         sudahIsi
-                            ? 'BERES! ${todayActivities.length} kegiatan hari ini'
+                            ? 'Selesai · ${todayActivities.length} kegiatan hari ini'
                             : 'Belum ada catatan kegiatan hari ini',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: p.textPrimary,
                         ),
                       ),
@@ -260,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         sudahIsi
                             ? 'Tanggal $todayStr · Rata-rata capaian $todayAvg%'
-                            : 'Catat aktivitas harian + foto geotag GPS sekarang.',
+                            : 'Catat aktivitas harian beserta foto geotag GPS.',
                         style: TextStyle(fontSize: 11.5, color: p.textSecondary),
                       ),
                     ],
@@ -268,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (sudahIsi)
                   StatusDotBadge(
-                    label: 'BERES!',
+                    label: 'Selesai',
                     color: p.success,
                     bgColor: p.surface,
                     showDot: false,
@@ -276,8 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 else ...[
                   const SizedBox(width: 8),
                   KjNeoButton(
-                    label: 'GAS ISI!',
-                    variant: KjButtonVariant.orange,
+                    label: 'Input',
+                    variant: KjButtonVariant.blue,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     onPressed: widget.onTapInputCKP,
                   ),
@@ -357,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           'Unduh Laporan Hasil Kerja (.xlsx)',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: p.textPrimary),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.textPrimary),
                         ),
                         Text(
                           'Periode ${period['nama'] ?? ''}',
@@ -371,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: p.surface,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: p.border, width: 1.5),
+                      border: Border.all(color: p.border, width: 1),
                     ),
                     child: Icon(Icons.download_rounded, size: 17, color: p.textPrimary),
                   ),
@@ -392,8 +379,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ExecutiveEmptyState(
               icon: Icons.edit_calendar_rounded,
               title: 'Belum Ada Catatan Hari Ini',
-              subtitle: 'Spill realisasi kerja harianmu sekarang agar progres periode tetap terjaga.',
-              buttonLabel: 'GAS ISI!',
+              subtitle: 'Lengkapi realisasi kerja harian Anda agar progres periode tetap terjaga.',
+              buttonLabel: 'Input Kegiatan',
               onPressed: widget.onTapInputCKP,
             )
           else
@@ -413,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         children: [
                           StatusDotBadge(
-                            label: isDone ? 'BERES!' : 'Proses',
+                            label: isDone ? 'Selesai' : 'Proses',
                             color: isDone ? p.success : p.warning,
                             bgColor: isDone ? p.successBg : p.warningBg,
                           ),

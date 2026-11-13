@@ -113,17 +113,19 @@ class PhotoWatermark {
       final textSpan = TextSpan(
         children: [
           TextSpan(
-            text: '📱 KASI JADI — Jurnal Aktivitas & Kinerja\n',
+            text: 'KASI JADI — Jurnal Aktivitas & Kinerja\n',
             style: TextStyle(
-              color: const Color(0xFF00B4D8),
+              fontFamily: 'PlusJakartaSans',
+              color: const Color(0xFF38BDF8),
               fontSize: fontSizeTitle,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               height: 1.35,
             ),
           ),
           TextSpan(
-            text: '📍 Titik Koordinat : $coordStr\n',
+            text: 'Koordinat : $coordStr\n',
             style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
               color: Colors.white,
               fontSize: fontSizeBody,
               fontWeight: FontWeight.w600,
@@ -131,8 +133,9 @@ class PhotoWatermark {
             ),
           ),
           TextSpan(
-            text: '🕒 Timestamp       : $timeStr',
+            text: 'Waktu     : $timeStr',
             style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
               color: const Color(0xFFFDE047),
               fontSize: fontSizeBody,
               fontWeight: FontWeight.w600,

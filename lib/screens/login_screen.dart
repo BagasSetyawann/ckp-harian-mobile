@@ -205,15 +205,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           children: [
                             Container(
-                              width: 54,
-                              height: 48,
+                              width: 52,
+                              height: 46,
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: p.border, width: 2),
+                                color: isDark ? p.surfaceElevated : p.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: p.border, width: 1),
                                 boxShadow: [
-                                  BoxShadow(color: p.shadow, offset: const Offset(2.5, 3.5)),
+                                  BoxShadow(
+                                    color: p.shadow,
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 8,
+                                  ),
                                 ],
                               ),
                               child: const KjLogoMark(width: 40, height: 34),
@@ -227,9 +231,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     'JURNAL AKTIVITAS & KINERJA',
                                     style: AppTheme.mono(
                                       size: 10,
-                                      weight: FontWeight.w700,
+                                      weight: FontWeight.w600,
                                       color: isDark ? p.info : p.primary,
-                                      letterSpacing: 0.9,
+                                      letterSpacing: 0.8,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -237,10 +241,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     TextSpan(
                                       text: 'KASI ',
                                       style: TextStyle(
-                                        fontSize: 25,
-                                        fontWeight: FontWeight.w800,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
                                         color: p.textPrimary,
-                                        letterSpacing: -0.6,
+                                        letterSpacing: -0.5,
                                       ),
                                       children: [
                                         TextSpan(
@@ -258,39 +262,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: p.tealBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: p.border, width: 1.5),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.bolt_rounded, size: 16, color: p.orange),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Kasi Jadi Hari Ini, Sat-Set No Drama!',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: p.textPrimary,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        Text(
+                          'Kanal Sistem Jurnal Aktivitas dan Capaian Kinerja Pegawai',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: p.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const KjTenunStrip(height: 10, opacity: 0.24),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
 
                         // Login Card
                         HairlineCard(
                           padding: const EdgeInsets.all(20),
                           radius: 16,
-                          shadowOffset: const Offset(4, 5),
                           child: Form(
                             key: _formKey,
                             child: Column(
@@ -363,9 +348,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(height: 18),
 
                                 KjNeoButton(
-                                  label: 'GAS MASUK!',
+                                  label: 'Masuk',
                                   icon: Icons.arrow_forward_rounded,
-                                  variant: KjButtonVariant.orange,
+                                  variant: KjButtonVariant.blue,
                                   isLoading: _loading,
                                   expand: true,
                                   padding: const EdgeInsets.symmetric(vertical: 14),

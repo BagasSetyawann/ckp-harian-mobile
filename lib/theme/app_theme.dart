@@ -45,7 +45,7 @@ class ThemeController {
       Theme.of(context).brightness == Brightness.dark;
 }
 
-/// Palet warna resmi KASI JADI (Biru Elektrik, Toska, Oranye Hangat, Neo-Brutalism).
+/// Palet warna formal instansi KASI JADI (Biru Korporat & Slate).
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
   final Color bg;
@@ -113,45 +113,45 @@ class AppPalette extends ThemeExtension<AppPalette> {
   });
 
   static const light = AppPalette(
-    bg: Color(0xFFF4F6F9),
+    bg: Color(0xFFF8FAFC),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFEFF3F8),
+    surfaceMuted: Color(0xFFF1F5F9),
     surfaceElevated: Color(0xFFFFFFFF),
-    border: Color(0xFF1E293B),
-    borderStrong: Color(0xFF1E293B),
-    textPrimary: Color(0xFF1E293B),
+    border: Color(0xFFE2E8F0),
+    borderStrong: Color(0xFFCBD5E1),
+    textPrimary: Color(0xFF0F172A),
     textSecondary: Color(0xFF475569),
     textMuted: Color(0xFF64748B),
     primary: Color(0xFF0052FF),
-    primaryDeep: Color(0xFF003ECC),
-    primaryContainer: Color(0xFFEBF1FF),
+    primaryDeep: Color(0xFF003EC7),
+    primaryContainer: Color(0xFFEFF6FF),
     onPrimary: Color(0xFFFFFFFF),
     heroStart: Color(0xFF0052FF),
-    heroEnd: Color(0xFF003ECC),
-    heroBorder: Color(0xFF1E293B),
-    success: Color(0xFF009EC0),
-    successBg: Color(0xFFE0F7FA),
-    warning: Color(0xFFEA580C),
-    warningBg: Color(0xFFFFF0EA),
+    heroEnd: Color(0xFF003EC7),
+    heroBorder: Color(0xFF0043D1),
+    success: Color(0xFF0D9488),
+    successBg: Color(0xFFF0FDFA),
+    warning: Color(0xFFD97706),
+    warningBg: Color(0xFFFFFBEB),
     danger: Color(0xFFE11D48),
-    dangerBg: Color(0xFFFFE4E6),
+    dangerBg: Color(0xFFFFF1F2),
     info: Color(0xFF0052FF),
-    infoBg: Color(0xFFEBF1FF),
-    orange: Color(0xFFFF6B35),
-    orangeBg: Color(0xFFFFF0EA),
-    teal: Color(0xFF00B4D8),
-    tealBg: Color(0xFFE0F7FA),
-    ink: Color(0xFF1E293B),
-    shadow: Color(0xFF1E293B),
+    infoBg: Color(0xFFEFF6FF),
+    orange: Color(0xFFD97706),
+    orangeBg: Color(0xFFFFFBEB),
+    teal: Color(0xFF0D9488),
+    tealBg: Color(0xFFF0FDFA),
+    ink: Color(0xFF0F172A),
+    shadow: Color(0x0D0F172A),
   );
 
   static const dark = AppPalette(
     bg: Color(0xFF0B1120),
-    surface: Color(0xFF1E293B),
-    surfaceMuted: Color(0xFF152033),
-    surfaceElevated: Color(0xFF263449),
-    border: Color(0xFF64748B),
-    borderStrong: Color(0xFF94A3B8),
+    surface: Color(0xFF111827),
+    surfaceMuted: Color(0xFF1E293B),
+    surfaceElevated: Color(0xFF1E293B),
+    border: Color(0xFF334155),
+    borderStrong: Color(0xFF475569),
     textPrimary: Color(0xFFF8FAFC),
     textSecondary: Color(0xFFCBD5E1),
     textMuted: Color(0xFF94A3B8),
@@ -159,23 +159,23 @@ class AppPalette extends ThemeExtension<AppPalette> {
     primaryDeep: Color(0xFF1D4ED8),
     primaryContainer: Color(0xFF172554),
     onPrimary: Color(0xFFFFFFFF),
-    heroStart: Color(0xFF1E293B),
-    heroEnd: Color(0xFF0F172A),
-    heroBorder: Color(0xFF64748B),
-    success: Color(0xFF22D3EE),
-    successBg: Color(0xFF083344),
-    warning: Color(0xFFFB923C),
-    warningBg: Color(0xFF431407),
+    heroStart: Color(0xFF111827),
+    heroEnd: Color(0xFF1E293B),
+    heroBorder: Color(0xFF334155),
+    success: Color(0xFF2DD4BF),
+    successBg: Color(0xFF042F2E),
+    warning: Color(0xFFFBBF24),
+    warningBg: Color(0xFF451A03),
     danger: Color(0xFFFB7185),
     dangerBg: Color(0xFF4C0519),
-    info: Color(0xFF38BDF8),
+    info: Color(0xFF60A5FA),
     infoBg: Color(0xFF172554),
-    orange: Color(0xFFFF6B35),
-    orangeBg: Color(0xFF431407),
-    teal: Color(0xFF00B4D8),
-    tealBg: Color(0xFF083344),
+    orange: Color(0xFFFBBF24),
+    orangeBg: Color(0xFF451A03),
+    teal: Color(0xFF2DD4BF),
+    tealBg: Color(0xFF042F2E),
     ink: Color(0xFFF8FAFC),
-    shadow: Color(0xFF020617),
+    shadow: Color(0x3D000000),
   );
 
   @override
@@ -285,7 +285,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
 class AppTheme {
   static const String sansFamily = 'PlusJakartaSans';
-  static const String monoFamily = 'JetBrainsMono';
+  static const String monoFamily = 'PlusJakartaSans';
 
   static AppPalette of(BuildContext context) =>
       Theme.of(context).extension<AppPalette>() ??
@@ -295,12 +295,12 @@ class AppTheme {
 
   static TextStyle mono({
     double size = 12,
-    FontWeight weight = FontWeight.w500,
+    FontWeight weight = FontWeight.w600,
     Color? color,
     double? letterSpacing,
   }) =>
       TextStyle(
-        fontFamily: monoFamily,
+        fontFamily: sansFamily,
         fontSize: size,
         fontWeight: weight,
         color: color,
@@ -310,7 +310,7 @@ class AppTheme {
 
   static TextStyle tabular({
     double size = 12,
-    FontWeight weight = FontWeight.w500,
+    FontWeight weight = FontWeight.w600,
     Color? color,
   }) =>
       mono(size: size, weight: weight, color: color);
@@ -319,21 +319,20 @@ class AppTheme {
     AppPalette p, {
     Color? color,
     Color? borderColor,
-    double radius = 16,
+    double radius = 14,
     bool elevated = false,
     Offset? shadowOffset,
   }) {
-    final effectiveOffset =
-        shadowOffset ?? (elevated ? const Offset(4, 5) : const Offset(3, 4));
     return BoxDecoration(
       color: color ?? p.surface,
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: borderColor ?? p.border, width: 2),
+      border: Border.all(color: borderColor ?? p.border, width: 1),
       boxShadow: [
         BoxShadow(
           color: p.shadow,
-          offset: effectiveOffset,
-          blurRadius: 0,
+          offset: elevated ? const Offset(0, 4) : const Offset(0, 1),
+          blurRadius: elevated ? 16 : 6,
+          spreadRadius: 0,
         ),
       ],
     );
@@ -371,9 +370,9 @@ class AppTheme {
       displayColor: p.textPrimary,
     );
 
-    OutlineInputBorder inputBorder(Color color, {double width = 2}) =>
+    OutlineInputBorder inputBorder(Color color, {double width = 1}) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: color, width: width),
         );
 
@@ -394,14 +393,14 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: sansFamily,
           fontSize: 17,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           color: p.textPrimary,
-          letterSpacing: -0.3,
+          letterSpacing: -0.25,
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: p.border.withAlpha(isDark ? 90 : 45),
-        thickness: 1.5,
+        color: p.border,
+        thickness: 1,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -420,10 +419,10 @@ class AppTheme {
           color: p.textMuted,
         ),
         enabledBorder: inputBorder(p.border),
-        focusedBorder: inputBorder(p.primary, width: 2.2),
+        focusedBorder: inputBorder(p.primary, width: 1.5),
         errorBorder: inputBorder(p.danger),
-        focusedErrorBorder: inputBorder(p.danger, width: 2.2),
-        disabledBorder: inputBorder(p.border.withAlpha(110)),
+        focusedErrorBorder: inputBorder(p.danger, width: 1.5),
+        disabledBorder: inputBorder(p.border.withAlpha(120)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -434,11 +433,10 @@ class AppTheme {
           textStyle: const TextStyle(
             fontFamily: sansFamily,
             fontSize: 14,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: p.border, width: 2),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
@@ -450,11 +448,11 @@ class AppTheme {
           textStyle: const TextStyle(
             fontFamily: sansFamily,
             fontSize: 13.5,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
-          side: BorderSide(color: p.border, width: 2),
+          side: BorderSide(color: p.border, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
@@ -464,55 +462,54 @@ class AppTheme {
           textStyle: const TextStyle(
             fontFamily: sansFamily,
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: p.surface,
-        elevation: 0,
+        elevation: 6,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: p.border, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: p.border, width: 1),
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.surface,
-        elevation: 0,
+        elevation: 6,
         shape: RoundedRectangleBorder(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          side: BorderSide(color: p.border, width: 2),
+          side: BorderSide(color: p.border, width: 1),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? p.surfaceElevated : const Color(0xFF1E293B),
+        backgroundColor: isDark ? p.surfaceElevated : const Color(0xFF0F172A),
         contentTextStyle: const TextStyle(
           fontFamily: sansFamily,
           fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
           color: Colors.white,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: p.border, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: p.border, width: 1),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 68,
         elevation: 0,
         backgroundColor: p.surface,
-        indicatorColor: p.primary,
+        indicatorColor: p.primary.withAlpha(isDark ? 45 : 22),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: p.border, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontFamily: sansFamily,
             fontSize: 11,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected
                 ? (isDark ? Colors.white : p.primary)
                 : p.textMuted,

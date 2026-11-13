@@ -440,7 +440,7 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                   spacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('BERES!'),
+                      label: const Text('Selesai'),
                       selected: _status == 'selesai',
                       onSelected: (_) => setState(() => _status = 'selesai'),
                       selectedColor: p.teal,
@@ -448,24 +448,24 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
                       checkmarkColor: Colors.white,
                       labelStyle: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: _status == 'selesai' ? Colors.white : p.textPrimary,
                       ),
-                      side: BorderSide(color: p.border, width: 1.5),
+                      side: BorderSide(color: _status == 'selesai' ? p.teal : p.border, width: 1),
                     ),
                     ChoiceChip(
                       label: const Text('Dalam Proses'),
                       selected: _status == 'proses',
                       onSelected: (_) => setState(() => _status = 'proses'),
-                      selectedColor: p.orange,
+                      selectedColor: p.primary,
                       backgroundColor: p.surface,
                       checkmarkColor: Colors.white,
                       labelStyle: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: _status == 'proses' ? Colors.white : p.textPrimary,
                       ),
-                      side: BorderSide(color: p.border, width: 1.5),
+                      side: BorderSide(color: _status == 'proses' ? p.primary : p.border, width: 1),
                     ),
                   ],
                 ),
@@ -640,9 +640,9 @@ class _InputKegiatanScreenState extends State<InputKegiatanScreen> {
           const SizedBox(height: 18),
 
           KjNeoButton(
-            label: _isEditing ? 'BERES! Perbarui' : 'GAS SIMPAN!',
+            label: _isEditing ? 'Simpan Perubahan' : 'Simpan Kegiatan',
             icon: Icons.check_circle_outline_rounded,
-            variant: _isEditing ? KjButtonVariant.teal : KjButtonVariant.orange,
+            variant: _isEditing ? KjButtonVariant.teal : KjButtonVariant.blue,
             isLoading: _submitting,
             expand: true,
             padding: const EdgeInsets.symmetric(vertical: 14),

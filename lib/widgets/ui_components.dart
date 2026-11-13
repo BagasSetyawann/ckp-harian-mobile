@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Kartu Neo-Brutalism KASI JADI (border tegas 2px + hard offset shadow).
+/// Kartu formal KASI JADI (border halus 1px + soft elevation shadow).
 /// Mempertahankan nama & parameter HairlineCard demi kompatibilitas pemanggil.
 class HairlineCard extends StatelessWidget {
   final Widget child;
@@ -19,9 +19,9 @@ class HairlineCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(16),
     this.color,
     this.borderColor,
-    this.radius = 16,
+    this.radius = 14,
     this.onTap,
-    this.shadowOffset = const Offset(3, 4),
+    this.shadowOffset = const Offset(0, 1),
   });
 
   @override
@@ -61,7 +61,7 @@ class HairlineCard extends StatelessWidget {
   }
 }
 
-/// Badge status dengan border tegas dan titik indikator opsional.
+/// Badge status dengan border tipis dan titik indikator opsional.
 class StatusDotBadge extends StatelessWidget {
   final String label;
   final Color color;
@@ -80,15 +80,14 @@ class StatusDotBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = AppTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: borderColor ?? p.border,
-          width: 1.5,
+          color: borderColor ?? color.withAlpha(70),
+          width: 1,
         ),
       ),
       child: Row(
@@ -96,12 +95,11 @@ class StatusDotBadge extends StatelessWidget {
         children: [
           if (showDot) ...[
             Container(
-              width: 7,
-              height: 7,
+              width: 6,
+              height: 6,
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(color: p.border, width: 1),
               ),
             ),
             const SizedBox(width: 6),
@@ -111,7 +109,7 @@ class StatusDotBadge extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppTheme.sansFamily,
               fontSize: 11,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: color,
             ),
           ),
@@ -121,7 +119,7 @@ class StatusDotBadge extends StatelessWidget {
   }
 }
 
-/// Pill monospace dengan garis tepi tegas untuk tanggal, versi, bobot, kode.
+/// Pill informasi dengan tipografi Plus Jakarta Sans tabular-nums.
 class MonoPill extends StatelessWidget {
   final String text;
   final Color? color;
@@ -139,7 +137,7 @@ class MonoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = AppTheme.of(context);
-    final fg = color ?? p.textPrimary;
+    final fg = color ?? p.textSecondary;
     final bg = bgColor ?? p.surfaceMuted;
 
     return Container(
@@ -147,17 +145,17 @@ class MonoPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor ?? p.border, width: 1.5),
+        border: Border.all(color: borderColor ?? p.border, width: 1),
       ),
       child: Text(
         text,
-        style: AppTheme.mono(size: 11, weight: FontWeight.w700, color: fg),
+        style: AppTheme.mono(size: 11, weight: FontWeight.w600, color: fg),
       ),
     );
   }
 }
 
-/// Header bagian konten dengan tipografi tebal dan aksi opsional.
+/// Header bagian konten dengan tipografi formal dan aksi opsional.
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? actionLabel;
@@ -182,7 +180,7 @@ class SectionHeader extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppTheme.sansFamily,
               fontSize: 15,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: p.textPrimary,
               letterSpacing: -0.2,
             ),
@@ -199,7 +197,7 @@ class SectionHeader extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: AppTheme.sansFamily,
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: ThemeController.isDark(context) ? p.info : p.primary,
                 ),
               ),
@@ -210,7 +208,7 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-/// Tampilan kosong standar berbingkai Neo-Brutalism.
+/// Tampilan kosong standar formal.
 class ExecutiveEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -236,17 +234,14 @@ class ExecutiveEmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
               color: p.primaryContainer,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: p.border, width: 2),
-              boxShadow: [
-                BoxShadow(color: p.shadow, offset: const Offset(2, 3)),
-              ],
+              border: Border.all(color: p.primary.withAlpha(55), width: 1),
             ),
-            child: Icon(icon, size: 28, color: p.primary),
+            child: Icon(icon, size: 26, color: p.primary),
           ),
           const SizedBox(height: 14),
           Text(
@@ -255,7 +250,7 @@ class ExecutiveEmptyState extends StatelessWidget {
             style: TextStyle(
               fontFamily: AppTheme.sansFamily,
               fontSize: 15.5,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: p.textPrimary,
             ),
           ),
@@ -275,7 +270,7 @@ class ExecutiveEmptyState extends StatelessWidget {
             KjNeoButton(
               label: buttonLabel!,
               icon: Icons.add_rounded,
-              variant: KjButtonVariant.orange,
+              variant: KjButtonVariant.blue,
               onPressed: onPressed,
             ),
           ],
@@ -285,7 +280,7 @@ class ExecutiveEmptyState extends StatelessWidget {
   }
 }
 
-/// Bar pemilih periode kerja bulanan berbingkai Neo-Brutalism.
+/// Bar pemilih periode kerja bulanan.
 class PeriodSelectorBar extends StatelessWidget {
   final List<dynamic> periods;
   final int? selectedPeriodId;
@@ -318,7 +313,7 @@ class PeriodSelectorBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: p.primaryContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: p.border, width: 1.5),
+              border: Border.all(color: p.primary.withAlpha(50), width: 1),
             ),
             child: KjOutlineIcon(
               type: KjIconType.calendar,
@@ -372,10 +367,10 @@ class PeriodSelectorBar extends StatelessWidget {
   }
 }
 
-/// Varian warna tombol Neo-Brutalism KASI JADI.
+/// Varian warna tombol formal KASI JADI.
 enum KjButtonVariant { orange, teal, blue, secondary, danger }
 
-/// Tombol kapsul Neo-Brutalism ("GAS ISI!", "BERES!", "GAS MASUK!") dengan efek tekan.
+/// Tombol aksi formal KASI JADI.
 class KjNeoButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -393,9 +388,9 @@ class KjNeoButton extends StatefulWidget {
     this.onPressed,
     this.icon,
     this.leading,
-    this.variant = KjButtonVariant.orange,
+    this.variant = KjButtonVariant.blue,
     this.isLoading = false,
-    this.pill = true,
+    this.pill = false,
     this.expand = false,
     this.padding,
   });
@@ -414,90 +409,93 @@ class _KjNeoButtonState extends State<KjNeoButton> {
 
     final Color bgColor;
     final Color fgColor;
+    final Color borderColor;
     switch (widget.variant) {
       case KjButtonVariant.orange:
-        bgColor = const Color(0xFFFF6B35);
+      case KjButtonVariant.blue:
+        bgColor = p.primary;
         fgColor = Colors.white;
+        borderColor = p.primaryDeep;
         break;
       case KjButtonVariant.teal:
-        bgColor = const Color(0xFF00B4D8);
+        bgColor = p.teal;
         fgColor = Colors.white;
-        break;
-      case KjButtonVariant.blue:
-        bgColor = const Color(0xFF0052FF);
-        fgColor = Colors.white;
+        borderColor = p.teal;
         break;
       case KjButtonVariant.danger:
         bgColor = p.danger;
         fgColor = Colors.white;
+        borderColor = p.danger;
         break;
       case KjButtonVariant.secondary:
         bgColor = p.surface;
         fgColor = p.textPrimary;
+        borderColor = p.border;
         break;
     }
 
-    final radius = widget.pill ? 999.0 : 12.0;
+    const radius = 10.0;
 
-    final child = AnimatedContainer(
-      duration: const Duration(milliseconds: 80),
-      transform: Matrix4.translationValues(
-        _pressed && !disabled ? 1.5 : 0,
-        _pressed && !disabled ? 2.0 : 0,
-        0,
-      ),
-      padding: widget.padding ??
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-      decoration: BoxDecoration(
-        color: disabled ? bgColor.withAlpha(150) : bgColor,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: p.border, width: 2),
-        boxShadow: (_pressed || disabled)
-            ? []
-            : [
-                BoxShadow(
-                  color: p.shadow,
-                  offset: const Offset(2, 3),
-                  blurRadius: 0,
-                ),
-              ],
-      ),
-      child: Row(
-        mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (widget.isLoading) ...[
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                color: fgColor,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ] else if (widget.leading != null) ...[
-            widget.leading!,
-            const SizedBox(width: 8),
-          ] else if (widget.icon != null) ...[
-            Icon(widget.icon, size: 17, color: fgColor),
-            const SizedBox(width: 7),
-          ],
-          Flexible(
-            child: Text(
-              widget.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTheme.sansFamily,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-                color: fgColor,
-              ),
-            ),
+    final child = AnimatedOpacity(
+      duration: const Duration(milliseconds: 100),
+      opacity: disabled ? 0.55 : (_pressed ? 0.85 : 1.0),
+      child: Container(
+        padding: widget.padding ??
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(
+            color: borderColor,
+            width: 1,
           ),
-        ],
+          boxShadow: (disabled || widget.variant == KjButtonVariant.secondary)
+              ? null
+              : [
+                  BoxShadow(
+                    color: bgColor.withAlpha(45),
+                    offset: const Offset(0, 2),
+                    blurRadius: 8,
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.isLoading) ...[
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: fgColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ] else if (widget.leading != null) ...[
+              widget.leading!,
+              const SizedBox(width: 8),
+            ] else if (widget.icon != null) ...[
+              Icon(widget.icon, size: 17, color: fgColor),
+              const SizedBox(width: 7),
+            ],
+            Flexible(
+              child: Text(
+                widget.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.sansFamily,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                  color: fgColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -511,7 +509,7 @@ class _KjNeoButtonState extends State<KjNeoButton> {
   }
 }
 
-/// Banner pengingat khas Sulteng ("Jangan lupa spill kerjaan hari ini, Jo!").
+/// Banner pengingat formal pengisian jurnal kegiatan harian.
 class KjReminderBanner extends StatefulWidget {
   final String message;
   final String ctaLabel;
@@ -520,8 +518,8 @@ class KjReminderBanner extends StatefulWidget {
 
   const KjReminderBanner({
     super.key,
-    this.message = 'Jangan lupa spill kerjaan hari ini, Jo!',
-    this.ctaLabel = 'GAS ISI!',
+    this.message = 'Anda belum mencatat realisasi kegiatan hari ini.',
+    this.ctaLabel = 'Input Kegiatan',
     this.onTapCta,
     this.onDismiss,
   });
@@ -530,54 +528,25 @@ class KjReminderBanner extends StatefulWidget {
   State<KjReminderBanner> createState() => _KjReminderBannerState();
 }
 
-class _KjReminderBannerState extends State<KjReminderBanner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
+class _KjReminderBannerState extends State<KjReminderBanner> {
   @override
   Widget build(BuildContext context) {
     final p = AppTheme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: ThemeController.isDark(context) ? p.surface : p.bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: p.border, width: 2),
-        boxShadow: [
-          BoxShadow(color: p.shadow, offset: const Offset(3, 4)),
-        ],
+        color: p.warningBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: p.warning.withAlpha(80), width: 1),
       ),
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, __) => Container(
-              width: 11,
-              height: 11,
-              decoration: BoxDecoration(
-                color: Color.lerp(
-                  const Color(0xFFFF6B35),
-                  const Color(0xFFFFA585),
-                  _pulse.value * 0.55,
-                ),
-                shape: BoxShape.circle,
-                border: Border.all(color: p.border, width: 1.5),
-              ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: p.warning,
+              shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 10),
@@ -586,8 +555,8 @@ class _KjReminderBannerState extends State<KjReminderBanner>
               widget.message,
               style: TextStyle(
                 fontFamily: AppTheme.sansFamily,
-                fontSize: 12.8,
-                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
                 color: p.textPrimary,
               ),
             ),
@@ -596,21 +565,20 @@ class _KjReminderBannerState extends State<KjReminderBanner>
             const SizedBox(width: 8),
             InkWell(
               onTap: widget.onTapCta,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF6B35),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: p.border, width: 1.5),
+                  color: p.primary,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   widget.ctaLabel,
                   style: const TextStyle(
                     fontFamily: AppTheme.sansFamily,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
@@ -910,7 +878,7 @@ class _KjOutlineIconPainter extends CustomPainter {
       oldDelegate.strokeWidth != strokeWidth;
 }
 
-/// Pattern geometris Tenun / Ketupat Sulawesi Tengah tipis untuk divider atau aksen tepi.
+/// Garis pemisah formal tipis (pengganti motif tenun demi tampilan korporat bersih).
 class KjTenunStrip extends StatelessWidget {
   final double height;
   final double opacity;
@@ -918,59 +886,21 @@ class KjTenunStrip extends StatelessWidget {
 
   const KjTenunStrip({
     super.key,
-    this.height = 12,
-    this.opacity = 0.25,
+    this.height = 1,
+    this.opacity = 1.0,
     this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = AppTheme.of(context);
-    final effectiveColor = color ?? p.textPrimary;
     return Opacity(
       opacity: opacity,
-      child: SizedBox(
-        width: double.infinity,
-        height: height,
-        child: CustomPaint(
-          painter: _KjTenunPainter(color: effectiveColor),
-        ),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: color ?? p.border,
       ),
     );
   }
-}
-
-class _KjTenunPainter extends CustomPainter {
-  final Color color;
-
-  _KjTenunPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25;
-
-    final step = size.height <= 10 ? 12.0 : 16.0;
-    final cy = size.height / 2;
-    final ry = (size.height / 2) - 1.5;
-    final rx = step / 2 - 1.0;
-
-    for (double x = step / 2; x < size.width + step; x += step) {
-      final diamond = Path()
-        ..moveTo(x, cy - ry)
-        ..lineTo(x + rx, cy)
-        ..lineTo(x, cy + ry)
-        ..lineTo(x - rx, cy)
-        ..close();
-      canvas.drawPath(diamond, paint);
-      canvas.drawCircle(Offset(x, cy), 1.1, paint..style = PaintingStyle.fill);
-      paint.style = PaintingStyle.stroke;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _KjTenunPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

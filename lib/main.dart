@@ -132,12 +132,9 @@ class _MainShellState extends State<MainShell> {
               height: 34,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? p.surfaceElevated : p.bg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: p.border, width: 1.5),
-                boxShadow: [
-                  BoxShadow(color: p.shadow, offset: const Offset(1.5, 2)),
-                ],
+                border: Border.all(color: p.border, width: 1),
               ),
               child: const KjLogoMark(width: 28, height: 24),
             ),
@@ -153,7 +150,7 @@ class _MainShellState extends State<MainShell> {
                       style: TextStyle(
                         fontFamily: AppTheme.sansFamily,
                         fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         color: p.textPrimary,
                         letterSpacing: -0.3,
                       ),
@@ -244,24 +241,15 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(width: 4),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              KjTenunStrip(
-                height: 8,
-                opacity: isDark ? 0.25 : 0.18,
-              ),
-              Container(height: 2, color: p.border),
-            ],
-          ),
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: p.border),
         ),
       ),
       body: body,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: p.surface,
-          border: Border(top: BorderSide(color: p.border, width: 2)),
+          border: Border(top: BorderSide(color: p.border, width: 1)),
         ),
         child: NavigationBar(
           selectedIndex: _selectedIndex,
@@ -270,60 +258,60 @@ class _MainShellState extends State<MainShell> {
             NavigationDestination(
               icon: KjOutlineIcon(
                 type: KjIconType.dashboard,
-                color: p.textSecondary,
+                color: p.textMuted,
               ),
-              selectedIcon: const KjOutlineIcon(
+              selectedIcon: KjOutlineIcon(
                 type: KjIconType.dashboard,
-                color: Colors.white,
-                strokeWidth: 2.2,
+                color: isDark ? Colors.white : p.primary,
+                strokeWidth: 2.0,
               ),
               label: 'Beranda',
             ),
             NavigationDestination(
               icon: KjOutlineIcon(
                 type: KjIconType.dailyLog,
-                color: p.textSecondary,
+                color: p.textMuted,
               ),
-              selectedIcon: const KjOutlineIcon(
+              selectedIcon: KjOutlineIcon(
                 type: KjIconType.dailyLog,
-                color: Colors.white,
-                strokeWidth: 2.2,
+                color: isDark ? Colors.white : p.primary,
+                strokeWidth: 2.0,
               ),
               label: 'Input',
             ),
             NavigationDestination(
               icon: KjOutlineIcon(
                 type: KjIconType.calendar,
-                color: p.textSecondary,
+                color: p.textMuted,
               ),
-              selectedIcon: const KjOutlineIcon(
+              selectedIcon: KjOutlineIcon(
                 type: KjIconType.calendar,
-                color: Colors.white,
-                strokeWidth: 2.2,
+                color: isDark ? Colors.white : p.primary,
+                strokeWidth: 2.0,
               ),
               label: 'Riwayat',
             ),
             NavigationDestination(
               icon: KjOutlineIcon(
                 type: KjIconType.analytics,
-                color: p.textSecondary,
+                color: p.textMuted,
               ),
-              selectedIcon: const KjOutlineIcon(
+              selectedIcon: KjOutlineIcon(
                 type: KjIconType.analytics,
-                color: Colors.white,
-                strokeWidth: 2.2,
+                color: isDark ? Colors.white : p.primary,
+                strokeWidth: 2.0,
               ),
               label: 'Nilai',
             ),
             NavigationDestination(
               icon: KjOutlineIcon(
                 type: KjIconType.profile,
-                color: p.textSecondary,
+                color: p.textMuted,
               ),
-              selectedIcon: const KjOutlineIcon(
+              selectedIcon: KjOutlineIcon(
                 type: KjIconType.profile,
-                color: Colors.white,
-                strokeWidth: 2.2,
+                color: isDark ? Colors.white : p.primary,
+                strokeWidth: 2.0,
               ),
               label: 'Profil',
             ),
